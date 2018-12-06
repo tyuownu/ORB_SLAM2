@@ -28,4 +28,7 @@ echo "Configuring and building ORB_SLAM2 ..."
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j
+make -j2
+
+echo "Converting vocabulary to binary"
+../Vocabulary/bin_vocabulary ../Vocabulary/ORBvoc.txt ../Vocabulary/ORBvoc.bin
