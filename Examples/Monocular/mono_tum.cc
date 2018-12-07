@@ -29,6 +29,7 @@
 #include<System.h>
 
 using namespace std;
+std::ofstream outFile("time.txt");
 
 void LoadImages(const string &strFile, vector<string> &vstrImageFilenames,
                 vector<double> &vTimestamps);
@@ -114,10 +115,14 @@ int main(int argc, char **argv)
     for(int ni=0; ni<nImages; ni++)
     {
         totaltime+=vTimesTrack[ni];
+        outFile << ni << ": " << vTimesTrack[ni] << std::endl;
     }
     cout << "-------" << endl << endl;
     cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
     cout << "mean tracking time: " << totaltime/nImages << endl;
+    outFile << "median: " << vTimesTrack[nImages/2] << std::endl;
+    outFile << "mean: " << totaltime/nImages << std::endl;
+    outFile.close();
 
     // Save camera trajectory
     SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
