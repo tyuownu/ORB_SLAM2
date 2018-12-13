@@ -1108,23 +1108,23 @@ void ORBextractor::ComputePyramid(cv::Mat image)
 {
     for (int level = 0; level < nlevels; ++level)
     {
-        float scale = mvInvScaleFactor[level];
-        Size sz(cvRound((float)image.cols*scale), cvRound((float)image.rows*scale));
-        Size wholeSize(sz.width + EDGE_THRESHOLD*2, sz.height + EDGE_THRESHOLD*2);
-        Mat temp(wholeSize, image.type()), masktemp;
-        mvImagePyramid[level] = temp(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height));
-
-        // Compute the resized image
         if( level != 0 )
         {
-            resize(mvImagePyramid[level-1], mvImagePyramid[level], sz, 0, 0, INTER_LINEAR);
+            float preScale = mvInvScaleFactor[level - 1];
+            float curScale = mvInvScaleFactor[level];
+            Size preSz(cvRound((float)image.cols*preScale), cvRound((float)image.rows*preScale));
+            Size curSz(cvRound((float)image.cols*curScale), cvRound((float)image.rows*curScale));
+            Size curWholeSz(curSz.width + EDGE_THRESHOLD*2, curSz.height + EDGE_THRESHOLD*2);
+            mvImagePyramid[level] = Mat(curWholeSz, image.type());
+            Mat temp = mvImagePyramid[level - 1](Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, preSz.width, preSz.height)), masktemp = Mat(curSz, image.type());
+            resize(temp, masktemp, curSz, 0, 0, INTER_LINEAR);
 
-            copyMakeBorder(mvImagePyramid[level], temp, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+            copyMakeBorder(masktemp, mvImagePyramid[level], EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
                            BORDER_REFLECT_101+BORDER_ISOLATED);            
         }
         else
         {
-            copyMakeBorder(image, temp, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+            copyMakeBorder(image, mvImagePyramid[level], EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
                            BORDER_REFLECT_101);            
         }
     }
