@@ -32,6 +32,8 @@
 #include"../../../include/System.h"
 
 using namespace std;
+vector<double> vTimesTrack;
+std::ofstream outFile("ros_mono_time.txt");
 
 class ImageGrabber
 {
@@ -67,6 +69,19 @@ int main(int argc, char **argv)
 
     // Stop all threads
     SLAM.Shutdown();
+    double totaltime = 0;
+    for (int i = 0; i < vTimesTrack.size(); ++i)
+    {
+        totaltime += vTimesTrack[i];
+        outFile << i << ": " << vTimesTrack[i] << std::endl;
+    }
+    sort(vTimesTrack.begin(), vTimesTrack.end());
+    cout << "-------" << endl << endl;
+    cout << "median tracking time: " << vTimesTrack[vTimesTrack.size()/2] << endl;
+    cout << "mean tracking time: " << totaltime/vTimesTrack.size() << endl;
+    outFile << "median: " << vTimesTrack[vTimesTrack.size()/2] << std::endl;
+    outFile << "mean: " << totaltime/vTimesTrack.size() << std::endl;
+    outFile.close();
 
     // Save camera trajectory
     SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
@@ -89,8 +104,21 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
+#ifdef COMPILEDWITHC11
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+#else
+    std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
+#endif
 
     mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+
+#ifdef COMPILEDWITHC11
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+#else
+    std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
+#endif
+    vTimesTrack.push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2-t1).count());
+
 }
 
 
