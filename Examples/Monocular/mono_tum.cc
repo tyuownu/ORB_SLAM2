@@ -36,7 +36,7 @@ void LoadImages(const string &strFile, vector<string> &vstrImageFilenames,
 
 int main(int argc, char **argv)
 {
-    if(argc != 4 && argc != 5)
+    if(argc != 5)
     {
         cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings path_to_sequence [whether_show_viewer]" << endl;
         return 1;
