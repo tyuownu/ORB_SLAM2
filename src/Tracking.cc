@@ -734,6 +734,7 @@ void Tracking::CreateInitialMapMonocular()
     mpMap->mvpKeyFrameOrigins.push_back(pKFini);
 
     mState=OK;
+    cout << "initialize successful!\n" << std::endl;
 }
 
 void Tracking::CheckReplacedInLastFrame()
