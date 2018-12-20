@@ -67,6 +67,7 @@ int main(int argc, char **argv)
     {
         // Read image from file
         im = cv::imread(string(argv[3])+"/"+vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
+        // std::cout << "images: " << vstrImageFilenames[ni] << std::endl;
         double tframe = vTimestamps[ni];
 
         if(im.empty())
@@ -110,13 +111,13 @@ int main(int argc, char **argv)
     SLAM.Shutdown();
 
     // Tracking time statistics
-    sort(vTimesTrack.begin(),vTimesTrack.end());
     float totaltime = 0;
     for(int ni=0; ni<nImages; ni++)
     {
         totaltime+=vTimesTrack[ni];
         outFile << ni << ": " << vTimesTrack[ni] << std::endl;
     }
+    sort(vTimesTrack.begin(),vTimesTrack.end());
     cout << "-------" << endl << endl;
     cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
     cout << "mean tracking time: " << totaltime/nImages << endl;
