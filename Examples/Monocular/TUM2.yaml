@@ -56,3 +56,14 @@ Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
+
+# minimal parallar that control to initialize: the min the quick to initialize
+UBT.MIN_PARALLAR: 0.5
+# How many points' set to compute R,T
+UBT.MAX_ITERATIONS: 200
+# The min matches number that to initialize
+UBT.MIN_MATCHES_NUMBER: 100
+# using Homography & Fundamental to calculate R,T?
+UBT.RECONSTRUCT_WITH_H_AND_F: 0
+# The max Good ratio (n,1]
+UBT.MAX_GOOD_RATIO: 0.9

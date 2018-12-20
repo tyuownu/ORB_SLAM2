@@ -24,12 +24,12 @@
 
 #include "Optimizer.h"
 #include "ORBmatcher.h"
+#include "Param.h"
 
 #include<thread>
 
 namespace ORB_SLAM2
 {
-constexpr int MIN_PARALLAR = 0.5;
 
 Initializer::Initializer(const Frame &ReferenceFrame, float sigma, int iterations)
 {
@@ -113,12 +113,17 @@ bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatc
     float RH = SH/(SH+SF);
 
     // Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
-    /*
-    if(RH>0.40)
-        return ReconstructH(vbMatchesInliersH,H,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
-    else //if(pF_HF>0.6)
-    */
-    return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,MIN_PARALLAR,50);
+    std::cout << "MIN_PARALLAR: " << ubt.MIN_PARALLAR << std::endl;
+    if (ubt.RECONSTRUCT_WITH_H_AND_F)
+    {
+        if(RH>0.40)
+            return ReconstructH(vbMatchesInliersH,H,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
+        else //if(pF_HF>0.6)
+            return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,ubt.MIN_PARALLAR,50);
+    } else
+    {
+        return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,ubt.MIN_PARALLAR,50);
+    }
 
 }
 
@@ -476,6 +481,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     for(size_t i=0, iend = vbMatchesInliers.size() ; i<iend; i++)
         if(vbMatchesInliers[i])
             N++;
+    std::cout << "N: " << N << std::endl;
 
     // Compute Essential Matrix from Fundamental Matrix
     cv::Mat E21 = K.t()*F21*K;
@@ -507,7 +513,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     R21 = cv::Mat();
     t21 = cv::Mat();
 
-    int nMinGood = max(static_cast<int>(0.9*N),minTriangulated);
+    int nMinGood = max(static_cast<int>(ubt.MAX_GOOD_RATIO*N),minTriangulated);
 
     int nsimilar = 0;
     if(nGood1>0.7*maxGood)
@@ -530,6 +536,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     {
         if(parallax1>minParallax)
         {
+            std::cout << "p1" << std::endl;
             vP3D = vP3D1;
             vbTriangulated = vbTriangulated1;
 
@@ -541,6 +548,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     {
         if(parallax2>minParallax)
         {
+            std::cout << "p2" << std::endl;
             vP3D = vP3D2;
             vbTriangulated = vbTriangulated2;
 
@@ -552,6 +560,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     {
         if(parallax3>minParallax)
         {
+            std::cout << "p3" << std::endl;
             vP3D = vP3D3;
             vbTriangulated = vbTriangulated3;
 
@@ -563,6 +572,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     {
         if(parallax4>minParallax)
         {
+            std::cout << "p4" << std::endl;
             vP3D = vP3D4;
             vbTriangulated = vbTriangulated4;
 

@@ -27,6 +27,7 @@
 #include<opencv2/core/core.hpp>
 
 #include<System.h>
+#include <Param.h>
 
 using namespace std;
 std::ofstream outFile("time.txt");
@@ -47,6 +48,7 @@ int main(int argc, char **argv)
     vector<double> vTimestamps;
     string strFile = string(argv[3])+"/rgb.txt";
     LoadImages(strFile, vstrImageFilenames, vTimestamps);
+    ORB_SLAM2::ubt.loadParam(argv[2]);
 
     int nImages = vstrImageFilenames.size();
 

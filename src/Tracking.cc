@@ -34,12 +34,12 @@
 #include"PnPsolver.h"
 
 #include<iostream>
+#include <Param.h>
 
 #include<mutex>
 
 
 using namespace std;
-constexpr int MIN_MATCHES_NUMBER = 100;
 
 namespace ORB_SLAM2
 {
@@ -578,7 +578,7 @@ void Tracking::MonocularInitialization()
             if(mpInitializer)
                 delete mpInitializer;
 
-            mpInitializer =  new Initializer(mCurrentFrame,1.0,200);
+            mpInitializer =  new Initializer(mCurrentFrame,1.0,ubt.MAX_ITERATIONS);
 
             fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
 
@@ -601,7 +601,7 @@ void Tracking::MonocularInitialization()
         int nmatches = matcher.SearchForInitialization(mInitialFrame,mCurrentFrame,mvbPrevMatched,mvIniMatches,100);
 
         // Check if there are enough correspondences
-        if(nmatches<MIN_MATCHES_NUMBER)
+        if(nmatches<ubt.MIN_MATCHES_NUMBER)
         {
             delete mpInitializer;
             mpInitializer = static_cast<Initializer*>(NULL);
@@ -690,7 +690,7 @@ void Tracking::CreateInitialMapMonocular()
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
     float invMedianDepth = 1.0f/medianDepth;
 
-    if(medianDepth<0 || pKFcur->TrackedMapPoints(1)<MIN_MATCHES_NUMBER)
+    if(medianDepth<0 || pKFcur->TrackedMapPoints(1)<ubt.MIN_MATCHES_NUMBER)
     {
         cout << "Wrong initialization, reseting..." << endl;
         Reset();
