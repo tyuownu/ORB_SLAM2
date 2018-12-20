@@ -29,6 +29,7 @@
 
 namespace ORB_SLAM2
 {
+constexpr int MIN_PARALLAR = 0.5;
 
 Initializer::Initializer(const Frame &ReferenceFrame, float sigma, int iterations)
 {
@@ -112,12 +113,13 @@ bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatc
     float RH = SH/(SH+SF);
 
     // Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
+    /*
     if(RH>0.40)
         return ReconstructH(vbMatchesInliersH,H,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
     else //if(pF_HF>0.6)
-        return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
+    */
+    return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,MIN_PARALLAR,50);
 
-    return false;
 }
 
 
@@ -495,6 +497,10 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     int nGood2 = CheckRT(R2,t1,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D2, 4.0*mSigma2, vbTriangulated2, parallax2);
     int nGood3 = CheckRT(R1,t2,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D3, 4.0*mSigma2, vbTriangulated3, parallax3);
     int nGood4 = CheckRT(R2,t2,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D4, 4.0*mSigma2, vbTriangulated4, parallax4);
+    std::cout << "nGood1: " << nGood1 << ", parallax1: " << parallax1 << std::endl;
+    std::cout << "nGood2: " << nGood2 << ", parallax2: " << parallax2 << std::endl;
+    std::cout << "nGood3: " << nGood3 << ", parallax3: " << parallax3 << std::endl;
+    std::cout << "nGood4: " << nGood4 << ", parallax4: " << parallax4 << std::endl;
 
     int maxGood = max(nGood1,max(nGood2,max(nGood3,nGood4)));
 
@@ -885,12 +891,14 @@ int Initializer::CheckRT(const cv::Mat &R, const cv::Mat &t, const vector<cv::Ke
         if(squareError2>th2)
             continue;
 
-        vCosParallax.push_back(cosParallax);
-        vP3D[vMatches12[i].first] = cv::Point3f(p3dC1.at<float>(0),p3dC1.at<float>(1),p3dC1.at<float>(2));
-        nGood++;
-
         if(cosParallax<0.99998)
+        {
+            vCosParallax.push_back(cosParallax);
+            vP3D[vMatches12[i].first] = cv::Point3f(p3dC1.at<float>(0),p3dC1.at<float>(1),p3dC1.at<float>(2));
+            nGood++;
+
             vbGood[vMatches12[i].first]=true;
+        }
     }
 
     if(nGood>0)
