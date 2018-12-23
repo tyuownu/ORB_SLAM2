@@ -706,7 +706,9 @@ void Tracking::CreateInitialMapMonocular()
 
     if(medianDepth<0 || pKFcur->TrackedMapPoints(1)<ubt.MIN_MATCHES_NUMBER)
     {
-        cout << "Wrong initialization, reseting..." << endl;
+        cout << "Wrong initialization, (median depth = " << medianDepth
+          << ", #tracked map points = " << pKFcur->TrackedMapPoints(1)
+          << "),  reseting..." << endl;
         Reset();
         return;
     }
