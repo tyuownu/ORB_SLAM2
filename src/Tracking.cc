@@ -567,6 +567,7 @@ void Tracking::MonocularInitialization()
     if(!mpInitializer)
     {
         // Set Reference Frame
+        // std::cout << "initial frame key size: " << mCurrentFrame.mvKeys.size() << std::endl;
         if(mCurrentFrame.mvKeys.size()>100)
         {
             mInitialFrame = Frame(mCurrentFrame);
@@ -578,7 +579,7 @@ void Tracking::MonocularInitialization()
             if(mpInitializer)
                 delete mpInitializer;
 
-            mpInitializer =  new Initializer(mCurrentFrame,1.0,ubt.MAX_ITERATIONS);
+            mpInitializer =  new Initializer(mCurrentFrame,ubt.INITIALIZER_SIGMA,ubt.MAX_ITERATIONS);
 
             fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
 
@@ -588,6 +589,7 @@ void Tracking::MonocularInitialization()
     else
     {
         // Try to initialize
+        // std::cout << "current frame key size: " << mCurrentFrame.mvKeys.size() << std::endl;
         if((int)mCurrentFrame.mvKeys.size()<=100)
         {
             delete mpInitializer;
@@ -597,8 +599,20 @@ void Tracking::MonocularInitialization()
         }
 
         // Find correspondences
-        ORBmatcher matcher(0.9,true);
+        ORBmatcher matcher(ubt.MONO_INITIALE_NNRATIO,true);
         int nmatches = matcher.SearchForInitialization(mInitialFrame,mCurrentFrame,mvbPrevMatched,mvIniMatches,100);
+        /*
+        std::cout << "nmatches: " << nmatches << std::endl;
+        auto kk = 0;
+        for (auto ii = 0; ii < mInitialFrame.mvKeys.size(); ++ii)
+        {
+            if (mvIniMatches[ii] > 0)
+            {
+                cout << kk << ", p1: " << mInitialFrame.mvKeys[ii].pt << ", p2: " << mCurrentFrame.mvKeys[mvIniMatches[ii]].pt << std::endl;
+                ++kk;
+            }
+        }
+         */
 
         // Check if there are enough correspondences
         if(nmatches<ubt.MIN_MATCHES_NUMBER)

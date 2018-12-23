@@ -10,6 +10,9 @@ void UBT::loadParam(const std::string &strSettingPath)
   MAX_ITERATIONS = fSetting["UBT.MAX_ITERATIONS"];
   RECONSTRUCT_WITH_H_AND_F = fSetting["UBT.RECONSTRUCT_WITH_H_AND_F"];
   MAX_GOOD_RATIO = fSetting["UBT.MAX_GOOD_RATIO"];
+  MIN_TRIANGULATED = fSetting["UBT.MIN_TRIANGULATED"];
+  INITIALIZER_SIGMA = fSetting["UBT.INITIALIZER_SIGMA"];
+  MONO_INITIALE_NNRATIO = fSetting["UBT.MONO_INITIALE_NNRATIO"];
   fSetting.release();
 }
 UBT ubt;

@@ -48,7 +48,6 @@ int main(int argc, char **argv)
     vector<double> vTimestamps;
     string strFile = string(argv[3])+"/rgb.txt";
     LoadImages(strFile, vstrImageFilenames, vTimestamps);
-    ORB_SLAM2::ubt.loadParam(argv[2]);
 
     int nImages = vstrImageFilenames.size();
 
@@ -68,8 +67,8 @@ int main(int argc, char **argv)
     for(int ni=0; ni<nImages; ni++)
     {
         // Read image from file
+        std::cout << "images: " << vstrImageFilenames[ni] << std::endl;
         im = cv::imread(string(argv[3])+"/"+vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
-        // std::cout << "images: " << vstrImageFilenames[ni] << std::endl;
         double tframe = vTimestamps[ni];
 
         if(im.empty())

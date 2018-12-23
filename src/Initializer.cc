@@ -119,10 +119,10 @@ bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatc
         if(RH>0.40)
             return ReconstructH(vbMatchesInliersH,H,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
         else //if(pF_HF>0.6)
-            return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,ubt.MIN_PARALLAR,50);
+            return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,ubt.MIN_PARALLAR,ubt.MIN_TRIANGULATED);
     } else
     {
-        return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,ubt.MIN_PARALLAR,50);
+        return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,ubt.MIN_PARALLAR,ubt.MIN_TRIANGULATED);
     }
 
 }
@@ -219,6 +219,14 @@ void Initializer::FindFundamental(vector<bool> &vbMatchesInliers, float &score, 
         F21i = T2t*Fn*T1;
 
         currentScore = CheckFundamental(F21i, vbCurrentInliers, mSigma);
+        /*
+        auto inlier_num = 0;
+        for (auto ii = 0; ii < vbCurrentInliers.size(); ++ii)
+            if (vbCurrentInliers[ii])
+                inlier_num++;
+            std::cout << "iter: " << it << ", inlier num: " << inlier_num << ", score: " << currentScore << std::endl;
+            */
+
 
         if(currentScore>score)
         {
@@ -397,6 +405,7 @@ float Initializer::CheckHomography(const cv::Mat &H21, const cv::Mat &H12, vecto
 float Initializer::CheckFundamental(const cv::Mat &F21, vector<bool> &vbMatchesInliers, float sigma)
 {
     const int N = mvMatches12.size();
+    // std::cout << "CheckFundamental N: " << N << std::endl;
 
     const float f11 = F21.at<float>(0,0);
     const float f12 = F21.at<float>(0,1);
@@ -439,6 +448,7 @@ float Initializer::CheckFundamental(const cv::Mat &F21, vector<bool> &vbMatchesI
         const float num2 = a2*u2+b2*v2+c2;
 
         const float squareDist1 = num2*num2/(a2*a2+b2*b2);
+        // std::cout << "squareDist1: " << squareDist1 << endl;
 
         const float chiSquare1 = squareDist1*invSigmaSquare;
 
@@ -457,6 +467,7 @@ float Initializer::CheckFundamental(const cv::Mat &F21, vector<bool> &vbMatchesI
         const float num1 = a1*u1+b1*v1+c1;
 
         const float squareDist2 = num1*num1/(a1*a1+b1*b1);
+        // std::cout << "squareDist2: " << squareDist2 << endl;
 
         const float chiSquare2 = squareDist2*invSigmaSquare;
 
@@ -465,6 +476,7 @@ float Initializer::CheckFundamental(const cv::Mat &F21, vector<bool> &vbMatchesI
         else
             score += thScore - chiSquare2;
 
+        // std::cout << "bIN: " << bIn << std::endl;
         if(bIn)
             vbMatchesInliers[i]=true;
         else
@@ -840,6 +852,7 @@ int Initializer::CheckRT(const cv::Mat &R, const cv::Mat &t, const vector<cv::Ke
     P2 = K*P2;
 
     cv::Mat O2 = -R.t()*t;
+    // std::cout << "O2: " << O2 << std::endl;
 
     int nGood=0;
 
@@ -850,9 +863,15 @@ int Initializer::CheckRT(const cv::Mat &R, const cv::Mat &t, const vector<cv::Ke
 
         const cv::KeyPoint &kp1 = vKeys1[vMatches12[i].first];
         const cv::KeyPoint &kp2 = vKeys2[vMatches12[i].second];
+        /*
+        std::cout << "index: " << i
+        << ", kp1: [" << kp1.pt.x << ", " << kp1.pt.y
+        << "], kp2: [" << kp2.pt.x << ", " << kp2.pt.y << std::endl;
+         */
         cv::Mat p3dC1;
 
         Triangulate(kp1,kp2,P1,P2,p3dC1);
+        // std::cout << "p3dC1: " << p3dC1.t() << std::endl;
 
         if(!isfinite(p3dC1.at<float>(0)) || !isfinite(p3dC1.at<float>(1)) || !isfinite(p3dC1.at<float>(2)))
         {
@@ -868,6 +887,7 @@ int Initializer::CheckRT(const cv::Mat &R, const cv::Mat &t, const vector<cv::Ke
         float dist2 = cv::norm(normal2);
 
         float cosParallax = normal1.dot(normal2)/(dist1*dist2);
+        // std::cout << "cosParallax: " << cosParallax << std::endl;
 
         // Check depth in front of first camera (only if enough parallax, as "infinite" points can easily go to negative depth)
         if(p3dC1.at<float>(2)<=0 && cosParallax<0.99998)
@@ -875,6 +895,7 @@ int Initializer::CheckRT(const cv::Mat &R, const cv::Mat &t, const vector<cv::Ke
 
         // Check depth in front of second camera (only if enough parallax, as "infinite" points can easily go to negative depth)
         cv::Mat p3dC2 = R*p3dC1+t;
+        // std::cout << "p3dC2: " << p3dC2.t() << std::endl;
 
         if(p3dC2.at<float>(2)<=0 && cosParallax<0.99998)
             continue;
