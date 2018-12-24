@@ -113,7 +113,6 @@ bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatc
     float RH = SH/(SH+SF);
 
     // Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
-    std::cout << "MIN_PARALLAR: " << ubt.MIN_PARALLAR << std::endl;
     if (ubt.RECONSTRUCT_WITH_H_AND_F)
     {
         if(RH>0.40)
