@@ -28,6 +28,7 @@
 #include "ORBextractor.h"
 #include "Frame.h"
 #include "KeyFrameDatabase.h"
+#include "BoostArchiver.h"
 
 #include <mutex>
 
@@ -115,6 +116,15 @@ public:
     static bool lId(KeyFrame* pKF1, KeyFrame* pKF2){
         return pKF1->mnId<pKF2->mnId;
     }
+
+public:
+    // for serialization
+    KeyFrame();  // default constructor
+    void SetORBVocabulary(ORBVocabulary *porbv) { mpORBvocabulary = porbv; }
+private:
+    // serialize is recommended to be private
+    friend class boost::serialization::access;
+    template<class Archive> void serialize(Archive &ar, const unsigned int version);
 
 
     // The following variables are accesed from only 1 thread or never change (no mutex needed).
