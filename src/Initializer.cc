@@ -492,7 +492,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     for(size_t i=0, iend = vbMatchesInliers.size() ; i<iend; i++)
         if(vbMatchesInliers[i])
             N++;
-    std::cout << "N: " << N << std::endl;
+    // std::cout << "N: " << N << std::endl;
 
     // Compute Essential Matrix from Fundamental Matrix
     cv::Mat E21 = K.t()*F21*K;
@@ -514,10 +514,12 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     int nGood2 = CheckRT(R2,t1,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D2, 4.0*mSigma2, vbTriangulated2, parallax2);
     int nGood3 = CheckRT(R1,t2,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D3, 4.0*mSigma2, vbTriangulated3, parallax3);
     int nGood4 = CheckRT(R2,t2,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D4, 4.0*mSigma2, vbTriangulated4, parallax4);
+    /*
     std::cout << "nGood1: " << nGood1 << ", parallax1: " << parallax1 << std::endl;
     std::cout << "nGood2: " << nGood2 << ", parallax2: " << parallax2 << std::endl;
     std::cout << "nGood3: " << nGood3 << ", parallax3: " << parallax3 << std::endl;
     std::cout << "nGood4: " << nGood4 << ", parallax4: " << parallax4 << std::endl;
+    */
 
     int maxGood = max(nGood1,max(nGood2,max(nGood3,nGood4)));
 
@@ -547,7 +549,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     {
         if(parallax1>minParallax)
         {
-            std::cout << "p1" << std::endl;
+            // std::cout << "p1" << std::endl;
             vP3D = vP3D1;
             vbTriangulated = vbTriangulated1;
 
@@ -559,7 +561,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     {
         if(parallax2>minParallax)
         {
-            std::cout << "p2" << std::endl;
+            // std::cout << "p2" << std::endl;
             vP3D = vP3D2;
             vbTriangulated = vbTriangulated2;
 
@@ -571,7 +573,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     {
         if(parallax3>minParallax)
         {
-            std::cout << "p3" << std::endl;
+            // std::cout << "p3" << std::endl;
             vP3D = vP3D3;
             vbTriangulated = vbTriangulated3;
 
@@ -583,7 +585,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
     {
         if(parallax4>minParallax)
         {
-            std::cout << "p4" << std::endl;
+            // std::cout << "p4" << std::endl;
             vP3D = vP3D4;
             vbTriangulated = vbTriangulated4;
 
