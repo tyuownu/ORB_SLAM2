@@ -1513,6 +1513,7 @@ bool Tracking::Relocalization()
 
     if(!bMatch)
     {
+        mCurrentFrame.mTcw = cv::Mat::zeros(0, 0, CV_32F);
         return false;
     }
     else
