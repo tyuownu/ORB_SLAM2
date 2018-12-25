@@ -37,8 +37,8 @@ bool has_suffix(const std::string &str, const std::string &suffix) {
 }
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
-               const bool bUseViewer, const bool bSaveMap):mSensor(sensor), mpViewer(static_cast<Viewer*>(NULL)), mbReset(false),mbActivateLocalizationMode(false),
-        mbDeactivateLocalizationMode(false), mbSaveMap(bSaveMap)
+               const bool bUseViewer, const bool bSaveMap) :
+  mSensor(sensor), mbSaveMap(bSaveMap), mpViewer(static_cast<Viewer*>(NULL)), mbReset(false),mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false)
 {
     ORB_SLAM2::ubt.loadParam(strSettingsFile);
     // Output welcome message
@@ -548,11 +548,15 @@ bool System::LoadMap(const string &filename)
     std::cout << " ...done" << std::endl;
     std::cout << "Map Reconstructing" << std::flush;
     vector<ORB_SLAM2::KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
+    long unsigned int nMaxKFId = 0;
     for (auto it : vpKFs)
     {
         it->SetORBVocabulary(mpVocabulary);
         it->ComputeBoW();
+        if (it->mnFrameId > nMaxKFId)
+            nMaxKFId = it->mnFrameId;
     }
+    Frame::nNextId = nMaxKFId;
     std::cout << " ...done" << std::endl;
     in.close();
     return true;
