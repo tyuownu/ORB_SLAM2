@@ -31,6 +31,8 @@
 namespace ORB_SLAM2
 {
 
+std::map<double, cv::Point3f> odom;
+
 bool has_suffix(const std::string &str, const std::string &suffix) {
   std::size_t index = str.find(suffix, str.size() - suffix.size());
   return (index != std::string::npos);
@@ -135,6 +137,31 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
     mpLoopCloser->SetTracker(mpTracker);
     mpLoopCloser->SetLocalMapper(mpLocalMapper);
+
+    // load grouth truth
+    ifstream f;
+    f.open("odom.txt");
+    if (!f)
+    {
+        std::cout << "No odom data." << std::endl;
+    } else {
+        while (!f.eof())
+        {
+            string s;
+            getline(f, s);
+            if (!s.empty())
+            {
+                stringstream ss;
+                ss << s;
+                double timestamp;
+                ss >> timestamp;
+                double x, y, z;
+                ss >> x >> y >> z;
+                odom.insert(std::make_pair(timestamp, cv::Point3f(x, y, z)));
+            }
+        }
+        f.close();
+    }
 }
 
 cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp)
@@ -514,6 +541,93 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 {
     unique_lock<mutex> lock(mMutexState);
     return mTrackedKeyPointsUn;
+}
+
+void System::UpdateScaleUsingAdjacentKeyframe()
+{
+    if (odom.size() == 0)
+    {
+        std::cout << "no odom data." << std::endl;
+    }
+    std::vector<KeyFrame*> vpKeyFrames = mpMap->GetAllKeyFrames();
+    sort(vpKeyFrames.begin(), vpKeyFrames.end(), KeyFrame::lId);
+    std::vector<MapPoint*> vpMapPoints = mpMap->GetAllMapPoints();
+
+    std::vector<double> vdScales;
+
+    for (size_t i = 0; i < vpKeyFrames.size() - 1; i++)
+    {
+        if (odom.find(vpKeyFrames[i]->mTimeStamp) == odom.end())
+            continue;
+        // using adjacent keyframe
+        if (odom.find(vpKeyFrames[i+1]->mTimeStamp) == odom.end())
+            continue;
+
+        const double odom_L2 = cv::norm(odom[vpKeyFrames[i]->mTimeStamp] - odom[vpKeyFrames[i+1]->mTimeStamp]);
+        const double real_L2 = cv::norm(vpKeyFrames[i]->GetCameraCenter() - vpKeyFrames[i+1]->GetCameraCenter());
+        vdScales.push_back(odom_L2 / real_L2);
+    }
+
+    const double scale = std::accumulate(std::begin(vdScales), std::end(vdScales), 0.0) / vdScales.size();
+    std::cout << "scale: " << scale << std::endl;
+
+    for (auto it = vpKeyFrames.begin(); it != vpKeyFrames.end(); ++it)
+    {
+        cv::Mat pose = (*it)->GetPose();
+        cv::Mat t = pose.rowRange(0, 3).col(3) * scale;
+        t.copyTo(pose.rowRange(0, 3).col(3));
+        (*it)->SetPose(pose);
+    }
+
+    for (auto it = vpMapPoints.begin(); it != vpMapPoints.end(); ++it)
+    {
+        (*it)->SetWorldPos((*it)->GetWorldPos() * scale);
+    }
+}
+
+void System::UpdateScaleUsingConnectedKeyframes()
+{
+    if (odom.size() == 0)
+    {
+        std::cout << "no odom." << std::endl;
+    }
+    std::vector<KeyFrame*> vpKeyFrames = mpMap->GetAllKeyFrames();
+    std::vector<MapPoint*> vpMapPoints = mpMap->GetAllMapPoints();
+
+    std::vector<double> vdScales;
+
+    for (auto it = vpKeyFrames.begin(); it != vpKeyFrames.end(); ++it)
+    {
+        if (odom.find((*it)->mTimeStamp) == odom.end())
+            continue;
+        // using all connected keyframe
+        set<KeyFrame*> spConnectedKeyFrames = (*it)->GetConnectedKeyFrames();
+        for (auto cit = spConnectedKeyFrames.begin(); cit != spConnectedKeyFrames.end(); ++ cit)
+        {
+            if (odom.find((*cit)->mTimeStamp) == odom.end())
+                continue;
+
+            const double odom_L2 = cv::norm(odom[(*it)->mTimeStamp] - odom[(*cit)->mTimeStamp]);
+            const double real_L2 = cv::norm((*it)->GetCameraCenter() - (*cit)->GetCameraCenter());
+            vdScales.push_back(odom_L2 / real_L2);
+        }
+    }
+
+    const double scale = std::accumulate(std::begin(vdScales), std::end(vdScales), 0.0) / vdScales.size();
+    std::cout << "scale: " << scale << std::endl;
+
+    for (auto it = vpKeyFrames.begin(); it != vpKeyFrames.end(); ++it)
+    {
+        cv::Mat pose = (*it)->GetPose();
+        cv::Mat t = pose.rowRange(0, 3).col(3) * scale;
+        t.copyTo(pose.rowRange(0, 3).col(3));
+        (*it)->SetPose(pose);
+    }
+
+    for (auto it = vpMapPoints.begin(); it != vpMapPoints.end(); ++it)
+    {
+        (*it)->SetWorldPos((*it)->GetWorldPos() * scale);
+    }
 }
 
 void System::SaveMap(const string &filename)

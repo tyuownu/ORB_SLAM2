@@ -114,6 +114,9 @@ public:
     // See format details at: http://www.cvlibs.net/datasets/kitti/eval_odometry.php
     void SaveTrajectoryKITTI(const string &filename);
 
+    void UpdateScaleUsingConnectedKeyframes();
+    void UpdateScaleUsingAdjacentKeyframe();
+
 private:
     // Save/Load functions
     void SaveMap(const string &filename);

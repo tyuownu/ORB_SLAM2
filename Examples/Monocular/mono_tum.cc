@@ -108,6 +108,10 @@ int main(int argc, char **argv)
             std::this_thread::sleep_for(std::chrono::microseconds(static_cast<size_t>((T - ttrack)*1e6)));
     }
 
+    // update keyframes' pose and mappoints' position
+    // SLAM.UpdateScaleUsingConnectedKeyframes();
+    SLAM.UpdateScaleUsingAdjacentKeyframe();
+
     // Stop all threads
     SLAM.Shutdown();
 
