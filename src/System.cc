@@ -27,11 +27,12 @@
 #include <iomanip>
 #include <time.h>
 #include "Param.h"
+#include "Interpolation.h"
 
 namespace ORB_SLAM2
 {
 
-std::map<double, cv::Point3f> odom;
+OdomInterpolation odom;
 
 bool has_suffix(const std::string &str, const std::string &suffix) {
   std::size_t index = str.find(suffix, str.size() - suffix.size());
@@ -157,7 +158,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
                 ss >> timestamp;
                 double x, y, z;
                 ss >> x >> y >> z;
-                odom.insert(std::make_pair(timestamp, cv::Point3f(x, y, z)));
+                odom.Add(Odom(timestamp, cv::Point3f(x, y, z)));
             }
         }
         f.close();
@@ -545,7 +546,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 
 void System::UpdateScaleUsingAdjacentKeyframe()
 {
-    if (odom.size() == 0)
+    if (odom.DataSize() == 0)
     {
         std::cout << "no odom data." << std::endl;
     }
@@ -557,15 +558,16 @@ void System::UpdateScaleUsingAdjacentKeyframe()
 
     for (size_t i = 0; i < vpKeyFrames.size() - 1; i++)
     {
-        if (odom.find(vpKeyFrames[i]->mTimeStamp) == odom.end())
-            continue;
-        // using adjacent keyframe
-        if (odom.find(vpKeyFrames[i+1]->mTimeStamp) == odom.end())
-            continue;
+        Odom d1 = odom.Interpolate(vpKeyFrames[i]->mTimeStamp);
+        std::cout << std::fixed << std::setprecision(6) << "d1 time: "<< d1.GetTime() << ": " << d1.GetTranslation() << std::endl;
+        Odom d2 = odom.Interpolate(vpKeyFrames[i+1]->mTimeStamp);
+        std::cout << std::fixed << std::setprecision(6) << "d2 time: "<< d2.GetTime() << ": " << d2.GetTranslation() << std::endl;
+        const double odom_L2 = cv::norm(d1.GetTranslation() - d2.GetTranslation());
 
-        const double odom_L2 = cv::norm(odom[vpKeyFrames[i]->mTimeStamp] - odom[vpKeyFrames[i+1]->mTimeStamp]);
+        // const double odom_L2 = cv::norm(odom[vpKeyFrames[i]->mTimeStamp] - odom[vpKeyFrames[i+1]->mTimeStamp]);
         const double real_L2 = cv::norm(vpKeyFrames[i]->GetCameraCenter() - vpKeyFrames[i+1]->GetCameraCenter());
         vdScales.push_back(odom_L2 / real_L2);
+        std::cout << "scale part: " << odom_L2 / real_L2 << std::endl;
     }
 
     const double scale = std::accumulate(std::begin(vdScales), std::end(vdScales), 0.0) / vdScales.size();
@@ -587,7 +589,7 @@ void System::UpdateScaleUsingAdjacentKeyframe()
 
 void System::UpdateScaleUsingConnectedKeyframes()
 {
-    if (odom.size() == 0)
+    if (odom.DataSize() == 0)
     {
         std::cout << "no odom." << std::endl;
     }
@@ -598,16 +600,14 @@ void System::UpdateScaleUsingConnectedKeyframes()
 
     for (auto it = vpKeyFrames.begin(); it != vpKeyFrames.end(); ++it)
     {
-        if (odom.find((*it)->mTimeStamp) == odom.end())
-            continue;
+        Odom d1 = odom.Interpolate((*it)->mTimeStamp);
         // using all connected keyframe
         set<KeyFrame*> spConnectedKeyFrames = (*it)->GetConnectedKeyFrames();
         for (auto cit = spConnectedKeyFrames.begin(); cit != spConnectedKeyFrames.end(); ++ cit)
         {
-            if (odom.find((*cit)->mTimeStamp) == odom.end())
-                continue;
-
-            const double odom_L2 = cv::norm(odom[(*it)->mTimeStamp] - odom[(*cit)->mTimeStamp]);
+            Odom d2 = odom.Interpolate((*cit)->mTimeStamp);
+            const double odom_L2 = cv::norm(d1.GetTranslation() - d2.GetTranslation());
+            // const double odom_L2 = cv::norm(odom[(*it)->mTimeStamp] - odom[(*cit)->mTimeStamp]);
             const double real_L2 = cv::norm((*it)->GetCameraCenter() - (*cit)->GetCameraCenter());
             vdScales.push_back(odom_L2 / real_L2);
         }
