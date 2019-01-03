@@ -630,6 +630,9 @@ void System::UpdateScaleUsingAdjacentKeyframe()
         cv::Mat t = pose.rowRange(0, 3).col(3) * scale;
         t.copyTo(pose.rowRange(0, 3).col(3));
         (*it)->SetPose(pose);
+
+        t = (*it)->mTcp.rowRange(0, 3).col(3) * scale;
+        t.copyTo((*it)->mTcp.rowRange(0, 3).col(3));
     }
 
     for (auto it = vpMapPoints.begin(); it != vpMapPoints.end(); ++it)
