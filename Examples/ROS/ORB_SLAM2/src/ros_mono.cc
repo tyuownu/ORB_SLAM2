@@ -26,6 +26,7 @@
 
 #include<ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
+#include <nav_msgs/Odometry.h>
 
 #include<opencv2/core/core.hpp>
 
@@ -45,6 +46,18 @@ public:
     ORB_SLAM2::System* mpSLAM;
 };
 
+class ImageAndOdomGrabber
+{
+ public:
+  ImageAndOdomGrabber(ORB_SLAM2::System* pSLAM):mpSLAM(pSLAM){}
+
+  void GrabImage(const sensor_msgs::ImageConstPtr& msg);
+
+  void GrabOdom(const nav_msgs::OdometryConstPtr& msg);
+
+  ORB_SLAM2::System* mpSLAM;
+};
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "Mono");
@@ -60,17 +73,19 @@ int main(int argc, char **argv)
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,strcmp(argv[3], "false") ? true : false, bool(atoi(argv[4])));
 
-    ImageGrabber igb(&SLAM);
+    ImageAndOdomGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+    ros::Subscriber image_sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageAndOdomGrabber::GrabImage,&igb);
+    ros::Subscriber odom_sub = nodeHandler.subscribe("/odom", 1, &ImageAndOdomGrabber::GrabOdom,&igb);
 
     ros::spin();
 
+    SLAM.UpdateScaleUsingAdjacentKeyframe();
     // Stop all threads
     SLAM.Shutdown();
     double totaltime = 0;
-    for (int i = 0; i < vTimesTrack.size(); ++i)
+    for (size_t i = 0; i < vTimesTrack.size(); ++i)
     {
         totaltime += vTimesTrack[i];
         outFile << i << ": " << vTimesTrack[i] << std::endl;
@@ -122,3 +137,37 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 }
 
 
+void ImageAndOdomGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
+{
+    // Copy the ros image message to cv::Mat.
+    cv_bridge::CvImageConstPtr cv_ptr;
+    try
+    {
+        cv_ptr = cv_bridge::toCvShare(msg);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+#ifdef COMPILEDWITHC11
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+#else
+    std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
+#endif
+
+    mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+
+#ifdef COMPILEDWITHC11
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+#else
+    std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
+#endif
+    vTimesTrack.push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2-t1).count());
+
+}
+void ImageAndOdomGrabber::GrabOdom(const nav_msgs::OdometryConstPtr& msg)
+{
+    cv::Point3f position(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
+    mpSLAM->AddOdom(msg->header.stamp.toSec(), position);
+}

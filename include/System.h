@@ -37,6 +37,7 @@
 #include "ORBVocabulary.h"
 #include "Viewer.h"
 #include "BoostArchiver.h"
+#include "Interpolation.h"
 
 namespace ORB_SLAM2
 {
@@ -117,6 +118,8 @@ public:
     void UpdateScaleUsingConnectedKeyframes();
     void UpdateScaleUsingAdjacentKeyframe();
 
+    void AddOdom(const double time, const cv::Point3f position);
+
 private:
     // Save/Load functions
     void SaveMap(const string &filename);
@@ -183,6 +186,8 @@ private:
     std::vector<MapPoint*> mTrackedMapPoints;
     std::vector<cv::KeyPoint> mTrackedKeyPointsUn;
     std::mutex mMutexState;
+
+    OdomInterpolation odom;
 };
 
 }// namespace ORB_SLAM

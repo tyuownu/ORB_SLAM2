@@ -32,7 +32,7 @@
 namespace ORB_SLAM2
 {
 
-OdomInterpolation odom;
+// OdomInterpolation odom;
 
 bool has_suffix(const std::string &str, const std::string &suffix) {
   std::size_t index = str.find(suffix, str.size() - suffix.size());
@@ -636,6 +636,11 @@ void System::UpdateScaleUsingConnectedKeyframes()
     {
         (*it)->SetWorldPos((*it)->GetWorldPos() * scale);
     }
+}
+
+void System::AddOdom(const double time, const cv::Point3f position)
+{
+    odom.Add(Odom(time, position));
 }
 
 void System::SaveMap(const string &filename)
