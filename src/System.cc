@@ -559,15 +559,23 @@ void System::UpdateScaleUsingAdjacentKeyframe()
     for (size_t i = 0; i < vpKeyFrames.size() - 1; i++)
     {
         Odom d1 = odom.Interpolate(vpKeyFrames[i]->mTimeStamp);
-        std::cout << std::fixed << std::setprecision(6) << "d1 time: "<< d1.GetTime() << ": " << d1.GetTranslation() << std::endl;
+        /*
+         *std::cout << std::fixed << std::setprecision(6)
+         *  << "d1 time: "<< d1.GetTime()
+         *  << ": " << d1.GetTranslation() << std::endl;
+         */
         Odom d2 = odom.Interpolate(vpKeyFrames[i+1]->mTimeStamp);
-        std::cout << std::fixed << std::setprecision(6) << "d2 time: "<< d2.GetTime() << ": " << d2.GetTranslation() << std::endl;
+        /*
+         *std::cout << std::fixed << std::setprecision(6)
+         *  << "d2 time: "<< d2.GetTime()
+         *  << ": " << d2.GetTranslation() << std::endl;
+         */
         const double odom_L2 = cv::norm(d1.GetTranslation() - d2.GetTranslation());
 
         // const double odom_L2 = cv::norm(odom[vpKeyFrames[i]->mTimeStamp] - odom[vpKeyFrames[i+1]->mTimeStamp]);
         const double real_L2 = cv::norm(vpKeyFrames[i]->GetCameraCenter() - vpKeyFrames[i+1]->GetCameraCenter());
         vdScales.push_back(odom_L2 / real_L2);
-        std::cout << "scale part: " << odom_L2 / real_L2 << std::endl;
+        // std::cout << "scale part: " << odom_L2 / real_L2 << std::endl;
     }
 
     const double scale = std::accumulate(std::begin(vdScales), std::end(vdScales), 0.0) / vdScales.size();

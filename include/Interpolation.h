@@ -16,7 +16,8 @@ class Odom {
 
     Odom() : dTimestamp(0.0), translation(cv::Point3f(0, 0, 0)) {}
 
-    Odom(const double time, const cv::Point3f position) : dTimestamp(time), translation(position) {}
+    Odom(const double time, const cv::Point3f position)
+      : dTimestamp(time), translation(position) {}
 
     double GetTime() const { return dTimestamp; }
 
@@ -32,7 +33,8 @@ class Odom {
             return other;
         }
         // Calculate the ratio
-        const double other_ratio = (time - dTimestamp) / (other.GetTime() - dTimestamp);
+        const double other_ratio =
+          (time - dTimestamp) / (other.GetTime() - dTimestamp);
         const double ratio = 1 - other_ratio;
 
 
@@ -57,7 +59,7 @@ class OdomInterpolation {
         Odom output;
         if (vOdom.size() == 0)
         {
-            std::cout << "empty translation list." << std::endl;
+            // std::cout << "empty translation list." << std::endl;
             return output;
         }
 
@@ -71,8 +73,14 @@ class OdomInterpolation {
             if (vOdom[index+1].GetTime() >= time)
             {
                 output = vOdom[index].Interpolate(vOdom[index+1], time);
-                std::cout << std::fixed << std::setprecision(6) << "vOdom time: "<< vOdom[index].GetTime() << ": " << vOdom[index].GetTranslation() << std::endl;
-                std::cout << std::fixed << std::setprecision(6) << "vOdom time: "<< vOdom[index+1].GetTime() << ": " << vOdom[index+1].GetTranslation() << std::endl;
+                /*
+                 *std::cout << std::fixed << std::setprecision(6)
+                 *  << "vOdom time: "<< vOdom[index].GetTime()
+                 *  << ": " << vOdom[index].GetTranslation() << std::endl;
+                 *std::cout << std::fixed << std::setprecision(6)
+                 *  << "vOdom time: "<< vOdom[index+1].GetTime()
+                 *  << ": " << vOdom[index+1].GetTranslation() << std::endl;
+                 */
                 break;
             }
         }
