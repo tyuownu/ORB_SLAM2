@@ -549,6 +549,7 @@ void System::UpdateScaleUsingAdjacentKeyframe()
     if (odom.DataSize() == 0)
     {
         std::cout << "no odom data." << std::endl;
+        return;
     }
     std::vector<KeyFrame*> vpKeyFrames = mpMap->GetAllKeyFrames();
     sort(vpKeyFrames.begin(), vpKeyFrames.end(), KeyFrame::lId);
