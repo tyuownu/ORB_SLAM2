@@ -540,10 +540,11 @@ void KeyFrame::SetBadFlag()
 
         // If a children has no covisibility links with any parent candidate, assign to the original parent of this KF
         if(!mspChildrens.empty())
-            for(set<KeyFrame*>::iterator sit=mspChildrens.begin(); sit!=mspChildrens.end(); sit++)
-            {
+        {
+            for (set<KeyFrame *>::iterator sit = mspChildrens.begin(); sit != mspChildrens.end(); sit++) {
                 (*sit)->ChangeParent(mpParent);
             }
+        }
 
         mpParent->EraseChild(this);
         mTcp = Tcw*mpParent->GetPoseInverse();

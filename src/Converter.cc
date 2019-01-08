@@ -84,7 +84,7 @@ cv::Mat Converter::toCvMat(const Eigen::Matrix<double,3,1> &m)
 {
     cv::Mat cvMat(3,1,CV_32F);
     for(int i=0;i<3;i++)
-            cvMat.at<float>(i)=m(i);
+        cvMat.at<float>(i)=m(i);
 
     return cvMat.clone();
 }
