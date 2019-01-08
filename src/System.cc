@@ -585,12 +585,14 @@ void System::UpdateScaleUsingAdjacentKeyframe()
     for (auto it = vpKeyFrames.begin(); it != vpKeyFrames.end(); ++it)
     {
         cv::Mat pose = (*it)->GetPose();
-        cv::Mat t = pose.rowRange(0, 3).col(3) * scale;
-        t.copyTo(pose.rowRange(0, 3).col(3));
+        pose.col(3).rowRange(0,3) = pose.col(3).rowRange(0, 3) * scale;
         (*it)->SetPose(pose);
 
-        t = (*it)->mTcp.rowRange(0, 3).col(3) * scale;
-        t.copyTo((*it)->mTcp.rowRange(0, 3).col(3));
+        if (!(*it)->mTcp.empty())
+        {
+            cv::Mat t1 = (*it)->mTcp.rowRange(0, 3).col(3) * scale;
+            t1.copyTo((*it)->mTcp.rowRange(0, 3).col(3));
+        }
     }
 
     for (auto it = vpMapPoints.begin(); it != vpMapPoints.end(); ++it)
@@ -631,9 +633,14 @@ void System::UpdateScaleUsingConnectedKeyframes()
     for (auto it = vpKeyFrames.begin(); it != vpKeyFrames.end(); ++it)
     {
         cv::Mat pose = (*it)->GetPose();
-        cv::Mat t = pose.rowRange(0, 3).col(3) * scale;
-        t.copyTo(pose.rowRange(0, 3).col(3));
+        pose.col(3).rowRange(0,3) = pose.col(3).rowRange(0, 3) * scale;
         (*it)->SetPose(pose);
+
+        if (!(*it)->mTcp.empty())
+        {
+            cv::Mat t1 = (*it)->mTcp.rowRange(0, 3).col(3) * scale;
+            t1.copyTo((*it)->mTcp.rowRange(0, 3).col(3));
+        }
     }
 
     for (auto it = vpMapPoints.begin(); it != vpMapPoints.end(); ++it)
