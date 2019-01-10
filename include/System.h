@@ -197,7 +197,7 @@ private:
     std::vector<cv::KeyPoint> mTrackedKeyPointsUn;
     std::mutex mMutexState;
 
-    OdomInterpolation odom;
+    OdomInterpolation mOdom;
 };
 
 }// namespace ORB_SLAM
