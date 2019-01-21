@@ -158,6 +158,9 @@ bool ORBmatcher::CheckDistEpipolarLine(const cv::KeyPoint &kp1,const cv::KeyPoin
 
 int ORBmatcher::SearchByBoW(KeyFrame* pKF,Frame &F, vector<MapPoint*> &vpMapPointMatches)
 {
+    // std::cout << __func__ << std::endl;
+    // std::cout << std::fixed << std::setprecision(6) << "pKF time: " << pKF->mTimeStamp << std::endl;
+    // std::cout << std::fixed << std::setprecision(6) << "F time: " << F.mTimeStamp << std::endl;
     const vector<MapPoint*> vpMapPointsKF = pKF->GetMapPointMatches();
 
     vpMapPointMatches = vector<MapPoint*>(F.N,static_cast<MapPoint*>(NULL));

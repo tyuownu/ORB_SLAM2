@@ -47,7 +47,7 @@ namespace ORB_SLAM2
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, const bool bReuseMap):
     mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys), mpViewer(NULL),
-    mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0)
+    mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0), mnLastOKFrameId(0)
 {
     // Load camera parameters from settings file
 
@@ -270,6 +270,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
 
 void Tracking::Track()
 {
+    // std::cout << __func__ << std::endl;
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;
@@ -424,6 +425,7 @@ void Tracking::Track()
         // If tracking were good, check if we insert a keyframe
         if(bOK)
         {
+            mnLastOKFrameId = mCurrentFrame.mnId;
             // Update motion model
             if(!mLastFrame.mTcw.empty())
             {
@@ -473,14 +475,56 @@ void Tracking::Track()
         }
 
         // Reset if the camera get lost soon after initialization
+        // std::cout << "In track mpMap id: " << mpMap->mnId << std::endl;
+        // std::cout << "tracking mpMap keyframe size = " << mpMap->KeyFramesInMap() << std::endl;
         if(mState==LOST)
         {
-            if(mpMap->KeyFramesInMap()<=5)
+            // std::cout << "mState = LOST" << std::endl;
+            // std::cout << "id = " << mpMap->nNextId - 1 << std::endl;
+            // std::cout << "keyframe size: " << mpMap->KeyFramesInMap(mpMap->nNextId-1) << std::endl;
+            if(mpMap->KeyFramesInMap(mpMap->mnId)<=5)
             {
                 cout << "Track lost soon after initialisation, reseting..." << endl;
-                mpSystem->Reset();
+                if (0 == mpMap->mnId)
+                    mpSystem->Reset();
+                else
+                {
+                    // reset current active mapId;
+                    mpMap->Delete(mpMap->mnId);
+                    // mpMap->mnId--;
+                    mpMap->nNextId--;
+
+                    mpLocalMapper->RequestReset();
+
+                    mState = NOT_INITIALIZED;
+                    if (mpInitializer)
+                    {
+                        delete mpInitializer;
+                        mpInitializer = static_cast<Initializer*>(NULL);
+                    }
+                    // mnLastOKFrameId = mCurrentFrame.mnId;
+                }
                 return;
             }
+            // std::cout << "cur id = " << mCurrentFrame.mnId << std::endl
+            // << ", mnLastOK frame id = " << mnLastOKFrameId << std::endl;
+
+            if (static_cast<int>(mCurrentFrame.mnId - mnLastOKFrameId) > mMaxFrames)
+            {
+                // TODO: need to do an odom optimized
+                std::cout << "long time, need re map again" << std::endl;
+                mState = NOT_INITIALIZED;
+                mpLocalMapper->RequestReset();
+                if (mpInitializer)
+                {
+                    delete mpInitializer;
+                    mpInitializer = static_cast<Initializer*>(NULL);
+                }
+                // mnLastOKFrameId = mCurrentFrame.mnId;
+                mVelocity = cv::Mat();
+                return;
+            }
+            // std::cout << "mState = LOST 2" << std::endl;
         }
 
         if(!mCurrentFrame.mpReferenceKF)
@@ -567,6 +611,7 @@ void Tracking::StereoInitialization()
 
 void Tracking::MonocularInitialization()
 {
+    // std::cout << __func__ << std::endl;
 
     if(!mpInitializer)
     {
@@ -656,16 +701,18 @@ void Tracking::MonocularInitialization()
 void Tracking::CreateInitialMapMonocular()
 {
     // Create KeyFrames
-    KeyFrame* pKFini = new KeyFrame(mInitialFrame,mpMap,mpKeyFrameDB);
-    KeyFrame* pKFcur = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
+    Map* pMap = new Map();
+    // std::cout << "pMap id: " << pMap->mnId << std::endl;
+    KeyFrame* pKFini = new KeyFrame(mInitialFrame,pMap,mpKeyFrameDB);
+    KeyFrame* pKFcur = new KeyFrame(mCurrentFrame,pMap,mpKeyFrameDB);
 
 
     pKFini->ComputeBoW();
     pKFcur->ComputeBoW();
 
     // Insert KFs in the map
-    mpMap->AddKeyFrame(pKFini);
-    mpMap->AddKeyFrame(pKFcur);
+    pMap->AddKeyFrame(pKFini);
+    pMap->AddKeyFrame(pKFcur);
 
     // Create MapPoints and asscoiate to keyframes
     for(size_t i=0; i<mvIniMatches.size();i++)
@@ -676,7 +723,7 @@ void Tracking::CreateInitialMapMonocular()
         //Create MapPoint.
         cv::Mat worldPos(mvIniP3D[i]);
 
-        MapPoint* pMP = new MapPoint(worldPos,pKFcur,mpMap);
+        MapPoint* pMP = new MapPoint(worldPos,pKFcur,pMap);
 
         pKFini->AddMapPoint(pMP,i);
         pKFcur->AddMapPoint(pMP,mvIniMatches[i]);
@@ -692,17 +739,23 @@ void Tracking::CreateInitialMapMonocular()
         mCurrentFrame.mvbOutlier[mvIniMatches[i]] = false;
 
         //Add to Map
-        mpMap->AddMapPoint(pMP);
+        pMap->AddMapPoint(pMP);
     }
+
+    // std::cout << "1. pKFini mvppoints = " << pKFini->GetMapPoints().size() << std::endl;
+    // std::cout << "2. pKFcur mvppoints = " << pKFcur->GetMapPoints().size() << std::endl;
+
 
     // Update Connections
     pKFini->UpdateConnections();
     pKFcur->UpdateConnections();
+    // std::cout << "3. pKFini mvppoints = " << pKFini->GetMapPoints().size() << std::endl;
+    // std::cout << "4. pKFcur mvppoints = " << pKFcur->GetMapPoints().size() << std::endl;
 
     // Bundle Adjustment
-    cout << "New Map created with " << mpMap->MapPointsInMap() << " points" << endl;
+    // cout << "New Map created with " << pMap->MapPointsInMap() << " points" << endl;
 
-    Optimizer::GlobalBundleAdjustemnt(mpMap,20);
+    Optimizer::GlobalBundleAdjustemnt(pMap,20);
 
     // Set median depth to 1
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
@@ -713,9 +766,28 @@ void Tracking::CreateInitialMapMonocular()
         cout << "Wrong initialization, (median depth = " << medianDepth
           << ", #tracked map points = " << pKFcur->TrackedMapPoints(1)
           << "),  reseting..." << endl;
-        Reset();
+
+        // std::cout << "mpMap MapPoints size: " << mpMap->GetAllMapPoints().size() << std::endl
+        // << "KeyFrames size: " << mpMap->GetAllKeyFrames().size() << std::endl;
+        if (mpMap->mnId == 0)
+        {
+            Reset();
+        }
+        else
+        {
+            if (mpInitializer)
+            {
+                delete mpInitializer;
+                mpInitializer = static_cast<Initializer*>(NULL);
+            }
+            Map::nNextId--;
+            // TODO: delete recent Keyframes map mappoints
+        }
         return;
     }
+
+    if (mpMap != pMap)
+        pMap->TransformToOtherMap(mpMap);
 
     // Scale initial baseline
     cv::Mat Tc2w = pKFcur->GetPose();
@@ -724,14 +796,17 @@ void Tracking::CreateInitialMapMonocular()
 
     // Scale points
     vector<MapPoint*> vpAllMapPoints = pKFini->GetMapPointMatches();
+    int num = 0;
     for(size_t iMP=0; iMP<vpAllMapPoints.size(); iMP++)
     {
         if(vpAllMapPoints[iMP])
         {
             MapPoint* pMP = vpAllMapPoints[iMP];
             pMP->SetWorldPos(pMP->GetWorldPos()*invMedianDepth);
+            num++;
         }
     }
+    // std::cout << "pKFini points size = " << num << std::endl;
 
     mpLocalMapper->InsertKeyFrame(pKFini);
     mpLocalMapper->InsertKeyFrame(pKFcur);
@@ -742,7 +817,8 @@ void Tracking::CreateInitialMapMonocular()
 
     mvpLocalKeyFrames.push_back(pKFcur);
     mvpLocalKeyFrames.push_back(pKFini);
-    mvpLocalMapPoints=mpMap->GetAllMapPoints();
+    mvpLocalMapPoints=mpMap->GetAllMapPoints(mpMap->nNextId - 1);
+    // std::cout << "mvpLocalMapPoints size = " << mvpLocalMapPoints.size() << std::endl;
     mpReferenceKF = pKFcur;
     mCurrentFrame.mpReferenceKF = pKFcur;
 
@@ -754,18 +830,23 @@ void Tracking::CreateInitialMapMonocular()
 
     mpMap->mvpKeyFrameOrigins.push_back(pKFini);
 
+    // std::cout << "3. pKFini mvppoints = " << pKFini->GetMapPoints().size() << std::endl;
+    // std::cout << "4. pKFcur mvppoints = " << pKFcur->GetMapPoints().size() << std::endl;
     mState=OK;
     cout << "initialize successful!\n" << std::endl;
 }
 
 void Tracking::CheckReplacedInLastFrame()
 {
+    // std::cout << __func__ <<  std::endl;
+    int num = 0;
     for(int i =0; i<mLastFrame.N; i++)
     {
         MapPoint* pMP = mLastFrame.mvpMapPoints[i];
 
         if(pMP)
         {
+            num++;
             MapPoint* pRep = pMP->GetReplaced();
             if(pRep)
             {
@@ -773,6 +854,7 @@ void Tracking::CheckReplacedInLastFrame()
             }
         }
     }
+    // std::cout << "num = " << num << std::endl;
 }
 
 
@@ -787,6 +869,9 @@ bool Tracking::TrackReferenceKeyFrame()
     vector<MapPoint*> vpMapPointMatches;
 
     int nmatches = matcher.SearchByBoW(mpReferenceKF,mCurrentFrame,vpMapPointMatches);
+    // std::cout << __func__ << std::endl;
+    // std::cout << "nmatches: " << nmatches << std::endl;
+    // std::cout << "mpReferenceKF mvp points = " << mpReferenceKF->GetMapPoints().size() << std::endl;
 
     if(nmatches<15)
         return false;
@@ -816,6 +901,7 @@ bool Tracking::TrackReferenceKeyFrame()
                 nmatchesMap++;
         }
     }
+    // std::cout << "nmatches map: " << nmatchesMap << std::endl;
 
     return nmatchesMap>=10;
 }
@@ -905,12 +991,15 @@ bool Tracking::TrackWithMotionModel()
     else
         th=7;
     int nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,th,mSensor==System::MONOCULAR);
+    // std::cout << __func__ << std::endl;
+    // std::cout << "nmatches: " << nmatches << std::endl;
 
     // If few matches, uses a wider window search
     if(nmatches<20)
     {
         fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
         nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,2*th,mSensor==System::MONOCULAR);
+        // std::cout << "nmatches: " << nmatches << std::endl;
     }
 
     if(nmatches<20)
@@ -983,6 +1072,8 @@ bool Tracking::TrackLocalMap()
 
         }
     }
+    // std::cout << __func__ << std::endl;
+    // std::cout << "mnMatchesInliers = " << mnMatchesInliers << std::endl;
 
     // Decide if the tracking was succesful
     // More restrictive if there was a relocalization recently
@@ -1005,10 +1096,11 @@ bool Tracking::NeedNewKeyFrame()
     if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested())
         return false;
 
-    const int nKFs = mpMap->KeyFramesInMap();
+    const int nKFs = mpMap->KeyFramesInMap(mpMap->mnId);
+    // std::cout << __func__ << " kf in map: " << nKFs << std::endl;
 
     // Do not insert keyframes if not enough frames have passed from last relocalisation
-    if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && nKFs>mMaxFrames)
+    if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames)
         return false;
 
     // Tracked MapPoints in the reference keyframe
@@ -1036,6 +1128,7 @@ bool Tracking::NeedNewKeyFrame()
             }
         }
     }
+    // std::cout << "nTrackedClose: " << nTrackedClose << ", nNonTrackedClose: " << nNonTrackedClose << std::endl;
 
     bool bNeedToInsertClose = (nTrackedClose<100) && (nNonTrackedClose>70);
 
@@ -1232,6 +1325,7 @@ void Tracking::UpdateLocalPoints()
     {
         KeyFrame* pKF = *itKF;
         const vector<MapPoint*> vpMPs = pKF->GetMapPointMatches();
+        // std::cout << "pKF mvp size = " << pKF->GetMapPoints().size() << std::endl;
 
         for(vector<MapPoint*>::const_iterator itMP=vpMPs.begin(), itEndMP=vpMPs.end(); itMP!=itEndMP; itMP++)
         {
@@ -1246,7 +1340,10 @@ void Tracking::UpdateLocalPoints()
                 pMP->mnTrackReferenceForFrame=mCurrentFrame.mnId;
             }
         }
+        // std::cout << "mvpLocalMapPoints size = " << mvpLocalMapPoints.size() << std::endl;
     }
+    // std::cout << __func__ << std::endl;
+    // std::cout << "mvpLocalMapPoints size = " << mvpLocalMapPoints.size() << std::endl;
 }
 
 
@@ -1358,6 +1455,8 @@ void Tracking::UpdateLocalKeyFrames()
         mpReferenceKF = pKFmax;
         mCurrentFrame.mpReferenceKF = mpReferenceKF;
     }
+    // std::cout << __func__ << std::endl;
+    // std::cout << "mvpLocalKeyFrames size = " << mvpLocalKeyFrames.size() << std::endl;
 }
 
 bool Tracking::Relocalization()

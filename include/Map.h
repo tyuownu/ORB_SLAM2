@@ -50,15 +50,25 @@ public:
     int GetLastBigChangeIdx();
 
     std::vector<KeyFrame*> GetAllKeyFrames();
-    std::vector<MapPoint*> GetAllMapPoints();
+    std::vector<MapPoint*> GetAllMapPoints(const int level = -1);
     std::vector<MapPoint*> GetReferenceMapPoints();
 
-    long unsigned int MapPointsInMap();
-    long unsigned  KeyFramesInMap();
+    long unsigned int MapPointsInMap(const int level = -1);
+    long unsigned  KeyFramesInMap(const int level = -1);
 
     long unsigned int GetMaxKFid();
 
     void clear();
+
+    void TransformToOtherMap(Map* pM);
+
+    void DeleteKeyFramesByMapId(const long unsigned int level);
+
+    void DeleteMapPointsByMapId(const long unsigned int level);
+
+    void Delete(const long unsigned int level);
+
+    Map* operator=(Map* pMap);
 
     vector<KeyFrame*> mvpKeyFrameOrigins;
 
@@ -84,6 +94,10 @@ protected:
     int mnBigChangeIdx;
 
     std::mutex mMutexMap;
+
+ public:
+    static long unsigned int nNextId;
+    long unsigned int mnId;
 };
 
 } //namespace ORB_SLAM

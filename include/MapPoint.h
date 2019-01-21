@@ -82,6 +82,8 @@ public:
     int PredictScale(const float &currentDist, KeyFrame*pKF);
     int PredictScale(const float &currentDist, Frame* pF);
 
+    void SetMap(Map* pMap);
+
 public:
     // for serialization
     MapPoint();
@@ -154,6 +156,8 @@ protected:
 
      std::mutex mMutexPos;
      std::mutex mMutexFeatures;
+public:
+    long unsigned int mnMapId;
 };
 
 } //namespace ORB_SLAM

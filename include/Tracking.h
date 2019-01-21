@@ -207,6 +207,8 @@ protected:
     unsigned int mnLastKeyFrameId;
     unsigned int mnLastRelocFrameId;
 
+    unsigned int mnLastOKFrameId;
+
     //Motion Model
     cv::Mat mVelocity;
 

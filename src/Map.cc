@@ -25,14 +25,24 @@
 namespace ORB_SLAM2
 {
 
+unsigned long int Map::nNextId = 0;
+
 Map::Map():mnMaxKFid(0),mnBigChangeIdx(0)
 {
+    mnId = nNextId;
 }
 
 void Map::AddKeyFrame(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutexMap);
+    if (mspKeyFrames.count(pKF))
+        std::cout << "already have kf " << pKF << ", on level: " << pKF->mnMapId << std::endl;
     mspKeyFrames.insert(pKF);
+    pKF->mnMapId = mnId;
+    // std::cout << "Map address: " << this << std::endl;
+    // std::cout << __func__ << std::endl;
+    // std::cout << "keyframe size: " << mspKeyFrames.size() << std::endl;
+    // std::cout << "mnMaxKFid = " << mnMaxKFid << ", cur id: " << pKF->mnId << std::endl;
     if(pKF->mnId>mnMaxKFid)
         mnMaxKFid=pKF->mnId;
 }
@@ -41,6 +51,7 @@ void Map::AddMapPoint(MapPoint *pMP)
 {
     unique_lock<mutex> lock(mMutexMap);
     mspMapPoints.insert(pMP);
+    pMP->mnMapId = mnId;
 }
 
 void Map::EraseMapPoint(MapPoint *pMP)
@@ -64,6 +75,8 @@ void Map::EraseKeyFrame(KeyFrame *pKF)
 void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
 {
     unique_lock<mutex> lock(mMutexMap);
+    // std::cout << __func__ << std::endl
+    // << ", vpMPs size = " << vpMPs.size() << std::endl;
     mvpReferenceMapPoints = vpMPs;
 }
 
@@ -85,22 +98,100 @@ vector<KeyFrame*> Map::GetAllKeyFrames()
     return vector<KeyFrame*>(mspKeyFrames.begin(),mspKeyFrames.end());
 }
 
-vector<MapPoint*> Map::GetAllMapPoints()
+vector<MapPoint*> Map::GetAllMapPoints(const int level)
 {
     unique_lock<mutex> lock(mMutexMap);
-    return vector<MapPoint*>(mspMapPoints.begin(),mspMapPoints.end());
+    if (level == -1)
+    {
+        return vector<MapPoint*>(mspMapPoints.begin(),mspMapPoints.end());
+    }
+    else
+    {
+        vector<MapPoint*> vKFs;
+        for (auto it = mspMapPoints.begin(); it != mspMapPoints.end(); it++)
+        {
+            if (static_cast<unsigned long int>(level) == (*it)->mnMapId)
+            {
+                vKFs.push_back(*it);
+            }
+        }
+        return vKFs;
+    }
 }
 
-long unsigned int Map::MapPointsInMap()
+long unsigned int Map::MapPointsInMap(const int level)
 {
-    unique_lock<mutex> lock(mMutexMap);
-    return mspMapPoints.size();
+    if (level == -1)
+    {
+        unique_lock<mutex> lock(mMutexMap);
+        return mspMapPoints.size();
+    }
+    else
+    {
+        int num = 0;
+        std::vector<MapPoint*> vMapPoints = GetAllMapPoints();
+        for (unsigned int index = 0; index < vMapPoints.size(); index++)
+        {
+            if (static_cast<unsigned long int>(level) == vMapPoints[index]->mnMapId)
+                num++;
+        }
+        return num;
+    }
 }
 
-long unsigned int Map::KeyFramesInMap()
+long unsigned int Map::KeyFramesInMap(const int level)
 {
+    if (level == -1)
+    {
+        unique_lock<mutex> lock(mMutexMap);
+        return mspKeyFrames.size();
+    }
+    else
+    {
+        int num = 0;
+        std::vector<KeyFrame*> vKeyFrames = GetAllKeyFrames();
+        // std::cout << "keyframe size: " << vKeyFrames.size() << std::endl;
+        for (unsigned int index = 0; index < vKeyFrames.size(); index++)
+        {
+            if (static_cast<unsigned long int>(level) == vKeyFrames[index]->mnMapId)
+                num++;
+        }
+        return num;
+    }
+}
+
+void Map::DeleteMapPointsByMapId(const long unsigned int level)
+{
+    std::vector<MapPoint*> vMapPoints = GetAllMapPoints();
     unique_lock<mutex> lock(mMutexMap);
-    return mspKeyFrames.size();
+    for (unsigned int index = 0; index < vMapPoints.size(); index++)
+    {
+        if (level == vMapPoints[index]->mnMapId)
+        {
+            mspMapPoints.erase(vMapPoints[index]);
+        }
+    }
+    // std::cout << __func__ << std::endl;
+}
+
+void Map::DeleteKeyFramesByMapId(const long unsigned int level)
+{
+    std::vector<KeyFrame*> vKeyFrames = GetAllKeyFrames();
+    unique_lock<mutex> lock(mMutexMap);
+    for (unsigned int index = 0; index < vKeyFrames.size(); index++)
+    {
+        if (level == vKeyFrames[index]->mnMapId)
+        {
+            mspKeyFrames.erase(vKeyFrames[index]);
+        }
+    }
+    // std::cout << __func__ << std::endl;
+}
+
+void Map::Delete(const long unsigned int level)
+{
+    DeleteKeyFramesByMapId(level);
+    DeleteMapPointsByMapId(level);
 }
 
 vector<MapPoint*> Map::GetReferenceMapPoints()
@@ -128,6 +219,33 @@ void Map::clear()
     mnMaxKFid = 0;
     mvpReferenceMapPoints.clear();
     mvpKeyFrameOrigins.clear();
+    nNextId = 0;
+    // mnId = 0;
+}
+
+void Map::TransformToOtherMap(Map* pM)
+{
+    pM->mnId = nNextId++;
+    // std::cout << __func__ << " mapID: " << pM->mnId << std::endl;
+    vector<KeyFrame*> KFs = GetAllKeyFrames();
+    vector<MapPoint*> MPs = GetAllMapPoints();
+
+    unique_lock<mutex> lock(mMutexMap);
+    for (unsigned int index = 0; index < MPs.size(); index++)
+    {
+        MapPoint* mp = MPs[index];
+        mp->SetMap(pM);
+        mp->mnMapId = pM->mnId;
+        pM->AddMapPoint(mp);
+    }
+
+    for (unsigned int index = 0; index < KFs.size(); index++)
+    {
+        KeyFrame* kf = KFs[index];
+        kf->mnMapId = pM->mnId;
+        kf->SetMap(pM);
+        pM->AddKeyFrame(kf);
+    }
 }
 
 template<class Archive>

@@ -30,7 +30,7 @@ long unsigned int KeyFrame::nNextId=0;
 
 // Default serializing constructor
 KeyFrame::KeyFrame() :
-    mnFrameId(0), mTimeStamp(0), mnGridCols(FRAME_GRID_COLS), mnGridRows(FRAME_GRID_ROWS),
+    mnFrameId(0), mnMapId(0), mTimeStamp(0), mnGridCols(FRAME_GRID_COLS), mnGridRows(FRAME_GRID_ROWS),
     mfGridElementWidthInv(0.0f), mfGridElementHeightInv(0.0f),
     mnTrackReferenceForFrame(0), mnFuseTargetForKF(0), mnBALocalForKF(0), mnBAFixedForKF(0),
     mnLoopQuery(0), mnLoopWords(0), mnRelocQuery(0), mnRelocWords(0), mnBAGlobalForKF(0),
@@ -40,7 +40,7 @@ KeyFrame::KeyFrame() :
 {}
 
 KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
-    mnFrameId(F.mnId),  mTimeStamp(F.mTimeStamp), mnGridCols(FRAME_GRID_COLS), mnGridRows(FRAME_GRID_ROWS),
+    mnFrameId(F.mnId), mnMapId(0), mTimeStamp(F.mTimeStamp), mnGridCols(FRAME_GRID_COLS), mnGridRows(FRAME_GRID_ROWS),
     mfGridElementWidthInv(F.mfGridElementWidthInv), mfGridElementHeightInv(F.mfGridElementHeightInv),
     mnTrackReferenceForFrame(0), mnFuseTargetForKF(0), mnBALocalForKF(0), mnBAFixedForKF(0),
     mnLoopQuery(0), mnLoopWords(0), mnRelocQuery(0), mnRelocWords(0), mnBAGlobalForKF(0),
@@ -54,6 +54,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mpORBvocabulary(F.mpORBvocabulary), mbFirstConnection(true), mpParent(NULL), mbNotErase(false),
     mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap)
 {
+    // std::cout << "KeyFrame address = " << this << std::endl;
     mnId=nNextId++;
 
     mGrid.resize(mnGridCols);
@@ -745,4 +746,9 @@ void KeyFrame::serialize(Archive &ar, const unsigned int version)
 }
 template void KeyFrame::serialize(boost::archive::binary_iarchive&, const unsigned int);
 template void KeyFrame::serialize(boost::archive::binary_oarchive&, const unsigned int);
+
+void KeyFrame::SetMap(Map* pMap)
+{
+    mpMap = pMap;
+}
 } //namespace ORB_SLAM

@@ -132,6 +132,7 @@ void LocalMapping::ProcessNewKeyFrame()
         mpCurrentKeyFrame = mlNewKeyFrames.front();
         mlNewKeyFrames.pop_front();
     }
+    // std::cout << "mpCurrentKeyFrame mvp points = " << mpCurrentKeyFrame->GetMapPoints().size() << std::endl;
 
     // Compute Bags of Words structures
     mpCurrentKeyFrame->ComputeBoW();
@@ -164,6 +165,7 @@ void LocalMapping::ProcessNewKeyFrame()
     mpCurrentKeyFrame->UpdateConnections();
 
     // Insert Keyframe in Map
+    // cout << __func__ << " add keyframe" << std::endl;
     mpMap->AddKeyFrame(mpCurrentKeyFrame);
 }
 
@@ -211,6 +213,7 @@ void LocalMapping::CreateNewMapPoints()
     if(mbMonocular)
         nn=20;
     const vector<KeyFrame*> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(nn);
+    // std::cout << "vpNeighKFs size = " << vpNeighKFs.size() << std::endl;
 
     ORBmatcher matcher(0.6,false);
 
@@ -449,6 +452,9 @@ void LocalMapping::CreateNewMapPoints()
             nnew++;
         }
     }
+    // std::cout << __func__ << std::endl;
+    // std::cout << "mp ckf timestamp: " << mpCurrentKeyFrame->mTimeStamp << std::endl;
+    // std::cout << "after mpCurrentKeyFrame mvp points = " << mpCurrentKeyFrame->GetMapPoints().size() << std::endl;
 }
 
 void LocalMapping::SearchInNeighbors()

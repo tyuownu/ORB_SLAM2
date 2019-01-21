@@ -117,6 +117,9 @@ public:
         return pKF1->mnId<pKF2->mnId;
     }
 
+    void SetMap(Map* pMap);
+
+
 public:
     // for serialization
     KeyFrame();  // default constructor
@@ -133,6 +136,8 @@ public:
     static long unsigned int nNextId;
     long unsigned int mnId;
     const long unsigned int mnFrameId;
+
+    long unsigned int mnMapId;
 
     const double mTimeStamp;
 
