@@ -480,8 +480,8 @@ void Tracking::Track()
         if(mState==LOST)
         {
             // std::cout << "mState = LOST" << std::endl;
-            // std::cout << "id = " << mpMap->nNextId - 1 << std::endl;
-            // std::cout << "keyframe size: " << mpMap->KeyFramesInMap(mpMap->nNextId-1) << std::endl;
+            // std::cout << "id = " << Map::nNextId - 1 << std::endl;
+            // std::cout << "keyframe size: " << mpMap->KeyFramesInMap(Map::nNextId-1) << std::endl;
             if(mpMap->KeyFramesInMap(mpMap->mnId)<=5)
             {
                 cout << "Track lost soon after initialisation, reseting..." << endl;
@@ -491,8 +491,7 @@ void Tracking::Track()
                 {
                     // reset current active mapId;
                     mpMap->Delete(mpMap->mnId);
-                    // mpMap->mnId--;
-                    mpMap->nNextId--;
+                    Map::nNextId--;
 
                     mpLocalMapper->RequestReset();
 
@@ -514,6 +513,7 @@ void Tracking::Track()
                 // TODO: need to do an odom optimized
                 std::cout << "long time, need re map again" << std::endl;
                 mState = NOT_INITIALIZED;
+                mpMap->mnId++;
                 mpLocalMapper->RequestReset();
                 if (mpInitializer)
                 {
@@ -780,7 +780,6 @@ void Tracking::CreateInitialMapMonocular()
                 delete mpInitializer;
                 mpInitializer = static_cast<Initializer*>(NULL);
             }
-            Map::nNextId--;
             // TODO: delete recent Keyframes map mappoints
         }
         return;
@@ -817,7 +816,7 @@ void Tracking::CreateInitialMapMonocular()
 
     mvpLocalKeyFrames.push_back(pKFcur);
     mvpLocalKeyFrames.push_back(pKFini);
-    mvpLocalMapPoints=mpMap->GetAllMapPoints(mpMap->nNextId - 1);
+    mvpLocalMapPoints=mpMap->GetAllMapPoints(Map::nNextId - 1);
     // std::cout << "mvpLocalMapPoints size = " << mvpLocalMapPoints.size() << std::endl;
     mpReferenceKF = pKFcur;
     mCurrentFrame.mpReferenceKF = pKFcur;
