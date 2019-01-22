@@ -108,7 +108,7 @@ vector<MapPoint*> Map::GetAllMapPoints(const int level)
     else
     {
         vector<MapPoint*> vKFs;
-        for (auto it = mspMapPoints.begin(); it != mspMapPoints.end(); it++)
+        for (set<MapPoint*>::iterator it = mspMapPoints.begin(); it != mspMapPoints.end(); it++)
         {
             if (static_cast<unsigned long int>(level) == (*it)->mnMapId)
             {
@@ -121,18 +121,17 @@ vector<MapPoint*> Map::GetAllMapPoints(const int level)
 
 long unsigned int Map::MapPointsInMap(const int level)
 {
+    unique_lock<mutex> lock(mMutexMap);
     if (level == -1)
     {
-        unique_lock<mutex> lock(mMutexMap);
         return mspMapPoints.size();
     }
     else
     {
         int num = 0;
-        std::vector<MapPoint*> vMapPoints = GetAllMapPoints();
-        for (unsigned int index = 0; index < vMapPoints.size(); index++)
+        for (set<MapPoint*>::iterator sit = mspMapPoints.begin(), send = mspMapPoints.end(); sit != send; sit++)
         {
-            if (static_cast<unsigned long int>(level) == vMapPoints[index]->mnMapId)
+            if (static_cast<unsigned long int>(level) == (*sit)->mnMapId)
                 num++;
         }
         return num;
@@ -141,19 +140,17 @@ long unsigned int Map::MapPointsInMap(const int level)
 
 long unsigned int Map::KeyFramesInMap(const int level)
 {
+    unique_lock<mutex> lock(mMutexMap);
     if (level == -1)
     {
-        unique_lock<mutex> lock(mMutexMap);
         return mspKeyFrames.size();
     }
     else
     {
         int num = 0;
-        std::vector<KeyFrame*> vKeyFrames = GetAllKeyFrames();
-        // std::cout << "keyframe size: " << vKeyFrames.size() << std::endl;
-        for (unsigned int index = 0; index < vKeyFrames.size(); index++)
+        for (set<KeyFrame*>::iterator sit = mspKeyFrames.begin(), send = mspKeyFrames.end(); sit != send; sit++)
         {
-            if (static_cast<unsigned long int>(level) == vKeyFrames[index]->mnMapId)
+            if (static_cast<unsigned long int>(level) == (*sit)->mnMapId)
                 num++;
         }
         return num;
@@ -162,13 +159,12 @@ long unsigned int Map::KeyFramesInMap(const int level)
 
 void Map::DeleteMapPointsByMapId(const long unsigned int level)
 {
-    std::vector<MapPoint*> vMapPoints = GetAllMapPoints();
     unique_lock<mutex> lock(mMutexMap);
-    for (unsigned int index = 0; index < vMapPoints.size(); index++)
+    for (set<MapPoint*>::iterator sit = mspMapPoints.begin(), send = mspMapPoints.end(); sit != send; sit++)
     {
-        if (level == vMapPoints[index]->mnMapId)
+        if (level == (*sit)->mnMapId)
         {
-            mspMapPoints.erase(vMapPoints[index]);
+            mspMapPoints.erase((*sit));
         }
     }
     // std::cout << __func__ << std::endl;
@@ -176,13 +172,12 @@ void Map::DeleteMapPointsByMapId(const long unsigned int level)
 
 void Map::DeleteKeyFramesByMapId(const long unsigned int level)
 {
-    std::vector<KeyFrame*> vKeyFrames = GetAllKeyFrames();
     unique_lock<mutex> lock(mMutexMap);
-    for (unsigned int index = 0; index < vKeyFrames.size(); index++)
+    for (set<KeyFrame*>::iterator sit = mspKeyFrames.begin(), send = mspKeyFrames.end(); sit != send; sit++)
     {
-        if (level == vKeyFrames[index]->mnMapId)
+        if (level == (*sit)->mnMapId)
         {
-            mspKeyFrames.erase(vKeyFrames[index]);
+            mspKeyFrames.erase(*sit);
         }
     }
     // std::cout << __func__ << std::endl;
@@ -225,26 +220,22 @@ void Map::clear()
 
 void Map::TransformToOtherMap(Map* pM)
 {
-    pM->mnId = nNextId++;
-    // std::cout << __func__ << " mapID: " << pM->mnId << std::endl;
-    vector<KeyFrame*> KFs = GetAllKeyFrames();
-    vector<MapPoint*> MPs = GetAllMapPoints();
-
     unique_lock<mutex> lock(mMutexMap);
-    for (unsigned int index = 0; index < MPs.size(); index++)
+    pM->mnId = nNextId++;
+    std::cout << __func__ << " mapID: " << pM->mnId << std::endl;
+
+    for (set<MapPoint*>::iterator sit = mspMapPoints.begin(), send = mspMapPoints.end(); sit != send; sit++)
     {
-        MapPoint* mp = MPs[index];
-        mp->SetMap(pM);
-        mp->mnMapId = pM->mnId;
-        pM->AddMapPoint(mp);
+        (*sit)->SetMap(pM);
+        (*sit)->mnMapId = pM->mnId;
+        pM->AddMapPoint(*sit);
     }
 
-    for (unsigned int index = 0; index < KFs.size(); index++)
+    for (set<KeyFrame*>::iterator sit = mspKeyFrames.begin(), send = mspKeyFrames.end(); sit != send; sit++)
     {
-        KeyFrame* kf = KFs[index];
-        kf->mnMapId = pM->mnId;
-        kf->SetMap(pM);
-        pM->AddKeyFrame(kf);
+        (*sit)->mnMapId = pM->mnId;
+        (*sit)->SetMap(pM);
+        pM->AddKeyFrame(*sit);
     }
 }
 
