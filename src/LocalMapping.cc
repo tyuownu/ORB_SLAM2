@@ -77,8 +77,8 @@ void LocalMapping::Run()
             if(!CheckNewKeyFrames() && !stopRequested())
             {
                 // Local BA
-                if(mpMap->KeyFramesInMap()>2)
-                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);
+                if(mpMap->KeyFramesInMap(mpMap->mnId)>2)
+                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);  // TODO: just using current mnMapId KeyFrames and Mappoints to do this
 
                 // Check redundant local Keyframes
                 KeyFrameCulling();
