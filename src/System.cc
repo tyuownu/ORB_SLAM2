@@ -41,7 +41,7 @@ bool has_suffix(const std::string &str, const std::string &suffix) {
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
                const bool bUseViewer, const bool bSaveMap) :
-  mSensor(sensor), mbSaveMap(bSaveMap), mpViewer(static_cast<Viewer*>(NULL)), mbPause(false), mbReset(false),mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false)
+  mSensor(sensor), mbSaveMap(bSaveMap), mpViewer(static_cast<Viewer*>(NULL)), mbPause(false), mbReset(false),mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false), mbIsScaleUpdate(false)
 {
     ORB_SLAM2::ubt.loadParam(strSettingsFile);
     // Output welcome message
@@ -594,6 +594,12 @@ void System::UpdateScaleUsingAdjacentKeyframe()
         std::cout << "no odom data." << std::endl;
         return;
     }
+
+    if (mbIsScaleUpdate)
+    {
+        std::cout << "The scale is alread adjusted!" << std::endl;
+        return;
+    }
     std::vector<KeyFrame*> vpKeyFrames = mpMap->GetAllKeyFrames();
     sort(vpKeyFrames.begin(), vpKeyFrames.end(), KeyFrame::lId);
     std::vector<MapPoint*> vpMapPoints = mpMap->GetAllMapPoints();
@@ -640,7 +646,9 @@ void System::UpdateScaleUsingAdjacentKeyframe()
     for (auto it = vpMapPoints.begin(); it != vpMapPoints.end(); ++it)
     {
         (*it)->SetWorldPos((*it)->GetWorldPos() * scale);
+        (*it)->UpdateNormalAndDepth();
     }
+    mbIsScaleUpdate = true;
 }
 
 void System::UpdateScaleUsingConnectedKeyframes()
@@ -648,6 +656,11 @@ void System::UpdateScaleUsingConnectedKeyframes()
     if (mOdom.DataSize() == 0)
     {
         std::cout << "no odom." << std::endl;
+    }
+    if (mbIsScaleUpdate)
+    {
+        std::cout << "The scale is alread adjusted!" << std::endl;
+        return;
     }
     std::vector<KeyFrame*> vpKeyFrames = mpMap->GetAllKeyFrames();
     std::vector<MapPoint*> vpMapPoints = mpMap->GetAllMapPoints();
@@ -687,7 +700,9 @@ void System::UpdateScaleUsingConnectedKeyframes()
     for (auto it = vpMapPoints.begin(); it != vpMapPoints.end(); ++it)
     {
         (*it)->SetWorldPos((*it)->GetWorldPos() * scale);
+        (*it)->UpdateNormalAndDepth();
     }
+    mbIsScaleUpdate = true;
 }
 
 void System::AddOdom(const double time, const cv::Point3f position)

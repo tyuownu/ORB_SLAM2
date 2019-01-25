@@ -522,6 +522,9 @@ void Tracking::Track()
                 }
                 // mnLastOKFrameId = mCurrentFrame.mnId;
                 mVelocity = cv::Mat();
+
+                // TODO: Adding update scale
+                mpSystem->UpdateScaleUsingAdjacentKeyframe();
                 return;
             }
             // std::cout << "mState = LOST 2" << std::endl;

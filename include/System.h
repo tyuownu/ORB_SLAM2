@@ -198,6 +198,7 @@ private:
     std::mutex mMutexState;
 
     OdomInterpolation mOdom;
+    bool mbIsScaleUpdate;
 };
 
 }// namespace ORB_SLAM
