@@ -119,6 +119,7 @@ public:
 
     void SetMap(Map* pMap);
 
+    void SetHeadKF() { mbIsHeadKF = true; }
 
 public:
     // for serialization
@@ -136,6 +137,7 @@ public:
     static long unsigned int nNextId;
     long unsigned int mnId;
     const long unsigned int mnFrameId;
+    bool mbIsHeadKF;
 
     long unsigned int mnMapId;
 

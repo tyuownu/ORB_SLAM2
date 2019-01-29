@@ -707,6 +707,7 @@ void Tracking::CreateInitialMapMonocular()
     Map* pMap = new Map();
     // std::cout << "pMap id: " << pMap->mnId << std::endl;
     KeyFrame* pKFini = new KeyFrame(mInitialFrame,pMap,mpKeyFrameDB);
+    pKFini->SetHeadKF();
     KeyFrame* pKFcur = new KeyFrame(mCurrentFrame,pMap,mpKeyFrameDB);
 
 
