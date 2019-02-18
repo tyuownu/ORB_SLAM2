@@ -27,6 +27,7 @@
 #include<ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 #include <nav_msgs/Odometry.h>
+#include <tf/transform_datatypes.h>
 
 #include<opencv2/core/core.hpp>
 
@@ -140,6 +141,7 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 void ImageAndOdomGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
     // Copy the ros image message to cv::Mat.
+    static cv::Mat image = cv::imread("/home/tyu/dataset/addon.png");
     cv_bridge::CvImageConstPtr cv_ptr;
     try
     {
@@ -150,13 +152,26 @@ void ImageAndOdomGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
+    /*
+    if (image.empty())
+    {
+        image = cv_ptr->image.clone();
+    }
+     */
 #ifdef COMPILEDWITHC11
     std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 #else
     std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
 #endif
 
-    mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+  if ((msg->header.seq > 518 && msg->header.seq < 600) || (msg->header.seq > 1518 && msg->header.seq < 1600))
+  {
+      // cv::Mat image = cv::Mat::zeros(cv_ptr->image.size(), cv_ptr->image.type());
+      // cv::imwrite(std::to_string(msg->header.seq)+".png", image);
+      mpSLAM->TrackMonocular(image, cv_ptr->header.stamp.toSec());
+  }
+  else
+      mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
 
 #ifdef COMPILEDWITHC11
     std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
@@ -169,5 +184,10 @@ void ImageAndOdomGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 void ImageAndOdomGrabber::GrabOdom(const nav_msgs::OdometryConstPtr& msg)
 {
     cv::Point3f position(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
-    mpSLAM->AddOdom(msg->header.stamp.toSec(), position);
+    Eigen::Quaternionf quat(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
+    tf::Quaternion quat1;
+    tf::quaternionMsgToTF(msg->pose.pose.orientation, quat1);
+    double yaw, roll, pitch;
+    tf::Matrix3x3(quat1).getRPY(roll, pitch, yaw);
+    mpSLAM->AddOdom(msg->header.stamp.toSec(), position, yaw);
 }

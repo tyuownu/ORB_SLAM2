@@ -304,6 +304,7 @@ void Tracking::Track()
             // Local Mapping is activated. This is the normal behaviour, unless
             // you explicitly activate the "only tracking" mode.
 
+            bOK = false;
             if(mState==OK)
             {
                 // Local Mapping might have changed some MapPoints tracked in last frame
@@ -508,6 +509,7 @@ void Tracking::Track()
             // std::cout << "cur id = " << mCurrentFrame.mnId << std::endl
             // << ", mnLastOK frame id = " << mnLastOKFrameId << std::endl;
 
+            mpSystem->UpdateScaleUsingAdjacentKeyframe();
             if (static_cast<int>(mCurrentFrame.mnId - mnLastOKFrameId) > mMaxFrames)
             {
                 // TODO: need to do an odom optimized
@@ -524,7 +526,6 @@ void Tracking::Track()
                 mVelocity = cv::Mat();
 
                 // TODO: Adding update scale
-                mpSystem->UpdateScaleUsingAdjacentKeyframe();
                 return;
             }
             // std::cout << "mState = LOST 2" << std::endl;
@@ -690,11 +691,31 @@ void Tracking::MonocularInitialization()
             }
 
             // Set Frame Poses
-            mInitialFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
-            cv::Mat Tcw = cv::Mat::eye(4,4,CV_32F);
-            Rcw.copyTo(Tcw.rowRange(0,3).colRange(0,3));
-            tcw.copyTo(Tcw.rowRange(0,3).col(3));
-            mCurrentFrame.SetPose(Tcw);
+            if (mpMap->KeyFramesInMap() == 0)
+            {
+                mInitialFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
+                cv::Mat Tcw = cv::Mat::eye(4,4,CV_32F);
+                Rcw.copyTo(Tcw.rowRange(0,3).colRange(0,3));
+                tcw.copyTo(Tcw.rowRange(0,3).col(3));
+                mCurrentFrame.SetPose(Tcw);
+            } else
+            {
+                cv::Mat initialPose = mpSystem->PredictPose(mInitialFrame.mTimeStamp);
+                mInitialFrame.SetPose(initialPose);
+                // std::cout << "initialPose: " << initialPose << std::endl;
+                cv::Mat Tcw = cv::Mat::eye(4,4,CV_32F);
+                Rcw.copyTo(Tcw.rowRange(0,3).colRange(0,3));
+                tcw.copyTo(Tcw.rowRange(0,3).col(3));
+                // std::cout << "Tcw: " << Tcw << std::endl;
+                cv::Mat currentPose = cv::Mat::eye(4, 4, CV_32F);
+                cv::Mat R = initialPose.rowRange(0, 3).colRange(0, 3) * Rcw;
+                cv::Mat t = Rcw * initialPose.rowRange(0, 3).col(3) + tcw;
+                R.copyTo(currentPose.rowRange(0, 3).colRange(0, 3));
+                t.copyTo(currentPose.rowRange(0, 3).col(3));
+                // std::cout << "currentPose: " << currentPose << std::endl;
+                mCurrentFrame.SetPose(currentPose);
+
+            }
 
             CreateInitialMapMonocular();
         }
@@ -759,7 +780,13 @@ void Tracking::CreateInitialMapMonocular()
     // Bundle Adjustment
     // cout << "New Map created with " << pMap->MapPointsInMap() << " points" << endl;
 
+    // std::cout << "pKFini timestamp: " << pKFini->mTimeStamp << std::endl;
+    // std::cout << "pKFcur timestamp: " << pKFcur->mTimeStamp << std::endl;
+    // std::cout << "pKFini1 pose: " << pKFini->GetPose() << std::endl;
+    // std::cout << "pKFcur1 pose: " << pKFcur->GetPose() << std::endl;
     Optimizer::GlobalBundleAdjustemnt(pMap,20);
+    // std::cout << "pKFini2 pose: " << pKFini->GetPose() << std::endl;
+    // std::cout << "pKFcur2 pose: " << pKFcur->GetPose() << std::endl;
 
     // Set median depth to 1
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
@@ -863,6 +890,9 @@ void Tracking::CheckReplacedInLastFrame()
 
 bool Tracking::TrackReferenceKeyFrame()
 {
+    // std::cout << __func__ << std::endl;
+    // std::cout << "mpReferenceKF timestamp: " << mpReferenceKF->mTimeStamp << std::endl;
+    // std::cout << "mCurrentFrame timestamp: " << mCurrentFrame.mTimeStamp << std::endl;
     // Compute Bag of Words vector
     mCurrentFrame.ComputeBoW();
 
@@ -977,6 +1007,9 @@ void Tracking::UpdateLastFrame()
 
 bool Tracking::TrackWithMotionModel()
 {
+    // std::cout << __func__ << std::endl;
+    // std::cout << "mLastFrame timestamp: " << mLastFrame.mTimeStamp << std::endl;
+    // std::cout << "mCurrentFrame timestamp: " << mCurrentFrame.mTimeStamp << std::endl;
     ORBmatcher matcher(0.9,true);
 
     // Update last frame pose according to its reference keyframe

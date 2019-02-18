@@ -123,7 +123,15 @@ public:
     void UpdateScaleUsingConnectedKeyframes();
     void UpdateScaleUsingAdjacentKeyframe();
 
-    void AddOdom(const double time, const cv::Point3f position);
+    void CalculateScaleUsingAdjacentKeyframe(const int level = -1);
+
+    void AddOdom(const double time, const cv::Point3f position, const float angle);
+
+    void AddOdom(const double time, const cv::Point3f position, const Eigen::Quaternionf rot);
+
+    cv::Mat PredictPose(const double time);
+
+    cv::Mat GetLastPose() const { return mLastPose; }
 
 private:
     // Save/Load functions
@@ -199,6 +207,14 @@ private:
 
     OdomInterpolation mOdom;
     bool mbIsScaleUpdate;
+    float mfScale;
+    cv::Mat mRotationMatrixFromOdom2CurrentPlane;
+
+
+    cv::Mat mLastPose;
+    float mfLastTrackOkPoseTime;
+
+    std::vector<double> mvFrameTimestamp;
 };
 
 }// namespace ORB_SLAM

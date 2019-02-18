@@ -49,7 +49,7 @@ public:
     void InformNewBigChange();
     int GetLastBigChangeIdx();
 
-    std::vector<KeyFrame*> GetAllKeyFrames();
+    std::vector<KeyFrame*> GetAllKeyFrames(const int level = -1);
     std::vector<MapPoint*> GetAllMapPoints(const int level = -1);
     std::vector<MapPoint*> GetReferenceMapPoints();
 

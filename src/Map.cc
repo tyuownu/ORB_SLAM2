@@ -35,8 +35,8 @@ Map::Map():mnMaxKFid(0),mnBigChangeIdx(0)
 void Map::AddKeyFrame(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutexMap);
-    if (mspKeyFrames.count(pKF))
-        std::cout << "already have kf " << pKF << ", on level: " << pKF->mnMapId << std::endl;
+    // if (mspKeyFrames.count(pKF))
+        // std::cout << "already have kf " << pKF << ", on level: " << pKF->mnMapId << std::endl;
     mspKeyFrames.insert(pKF);
     pKF->mnMapId = mnId;
     // std::cout << "Map address: " << this << std::endl;
@@ -92,10 +92,25 @@ int Map::GetLastBigChangeIdx()
     return mnBigChangeIdx;
 }
 
-vector<KeyFrame*> Map::GetAllKeyFrames()
+vector<KeyFrame*> Map::GetAllKeyFrames(const int level)
 {
     unique_lock<mutex> lock(mMutexMap);
-    return vector<KeyFrame*>(mspKeyFrames.begin(),mspKeyFrames.end());
+    if (level == -1)
+    {
+        return vector<KeyFrame*>(mspKeyFrames.begin(),mspKeyFrames.end());
+    }
+    else
+    {
+        vector<KeyFrame*> vKFs;
+        for (set<KeyFrame*>::iterator it = mspKeyFrames.begin(); it != mspKeyFrames.end(); it++)
+        {
+            if (static_cast<unsigned long int>(level) == (*it)->mnMapId)
+            {
+                vKFs.push_back(*it);
+            }
+        }
+        return vKFs;
+    }
 }
 
 vector<MapPoint*> Map::GetAllMapPoints(const int level)
@@ -107,15 +122,15 @@ vector<MapPoint*> Map::GetAllMapPoints(const int level)
     }
     else
     {
-        vector<MapPoint*> vKFs;
+        vector<MapPoint*> vMPs;
         for (set<MapPoint*>::iterator it = mspMapPoints.begin(); it != mspMapPoints.end(); it++)
         {
             if (static_cast<unsigned long int>(level) == (*it)->mnMapId)
             {
-                vKFs.push_back(*it);
+                vMPs.push_back(*it);
             }
         }
-        return vKFs;
+        return vMPs;
     }
 }
 

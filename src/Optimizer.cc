@@ -744,6 +744,9 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
 
     // Get Map Mutex
     unique_lock<mutex> lock(pMap->mMutexMapUpdate);
+    if(pbStopFlag)
+        if(*pbStopFlag)
+            return;
 
     if(!vToErase.empty())
     {
